@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "react": "18.3.1",
-    "react-native": "0.76.6"
+    "react-native": "0.76.6",
+    "react-native-fs": "^2.20.0",
+    "react-native-image-picker": "^7.2.3",
+    "react-native-vector-icons": "^10.2.0",
+    "react-native-video": "^6.9.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
