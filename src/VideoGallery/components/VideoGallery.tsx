@@ -3,43 +3,38 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList } from 'react-native';
 import Video from 'react-native-video';
 import RNFS from 'react-native-fs';  // Import RNFS to access local files
+import { RouteProp } from '@react-navigation/native';  // Import RouteProp for route parameters
 
 interface VideoGalleryProps {
-  visible: boolean;
-  onVideoSelect: (videoPath: string) => void;
-  onClose: () => void;
+  route: RouteProp<any, any>;  // Get route parameters
+  navigation: any;  // Navigation prop
 }
 
-const VideoGallery: React.FC<VideoGalleryProps> = ({ visible, onVideoSelect, onClose }) => {
+const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
   const [videos, setVideos] = useState<string[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   // Fetch videos from app's local storage directory when the modal is opened
   useEffect(() => {
-    if (visible) {
-      // Path to the directory where the videos are stored
-      const videosDirectory = `${RNFS.ExternalDirectoryPath}/snapmedia/videos`;
+    const videosDirectory = `${RNFS.ExternalDirectoryPath}/snapmedia/videos`;
 
-      // Read the files from the 'videos' directory
-      RNFS.readDir(videosDirectory)
-        .then((files) => {
-          // Filter out the files that are not videos (e.g., not ending with .mp4)
-          const videoPaths = files
-            .filter((file) => file.isFile() && file.name.endsWith('.mp4')) // You can adjust the extension if needed
-            .map((file) => file.path);
+    // Read the files from the 'videos' directory
+    RNFS.readDir(videosDirectory)
+      .then((files) => {
+        const videoPaths = files
+          .filter((file) => file.isFile() && file.name.endsWith('.mp4'))
+          .map((file) => file.path);
 
-          setVideos(videoPaths); // Set the video paths in the state
-        })
-        .catch((error) => {
-          console.error('Error reading videos directory:', error);
-        });
-    }
-  }, [visible]);
+        setVideos(videoPaths);
+      })
+      .catch((error) => {
+        console.error('Error reading videos directory:', error);
+      });
+  }, []);
 
   const handleVideoSelect = (videoPath: string) => {
-    setSelectedVideo(videoPath);
-    onVideoSelect(videoPath); // Pass selected video path to parent component
-    onClose(); // Close gallery modal
+    route.params?.onVideoSelect?.(videoPath);
+    navigation.goBack();
   };
 
   const renderItem = ({ item }: { item: string }) => {
@@ -54,19 +49,17 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ visible, onVideoSelect, onC
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.modalContent}>
-        <Text style={styles.modalHeader}>Select Video</Text>
-        <FlatList
-          data={videos}
-          renderItem={renderItem}
-          keyExtractor={(item, index) => index.toString()}
-        />
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>Close</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalHeader}>Select Video</Text>
+      <FlatList
+        data={videos}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => index.toString()}
+      />
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+        <Text style={styles.closeButtonText}>Close</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 

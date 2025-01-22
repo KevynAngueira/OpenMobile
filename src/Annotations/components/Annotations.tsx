@@ -1,20 +1,20 @@
 // Annotations.tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';  // Import useNavigation
 
 import AnnotationList from './AnnotationList';
 import AnnotationModal from './AnnotationModal';
-import VideoGallery from '../../VideoGallery/components/VideoGallery';
 import { handleSync, handleSendAnnotationsVideos } from '../services/AnnotationActions';
 import { FLASK_URL, HUB_BASE_URL } from '../../constants/Config';
 
 const Annotations = () => {
   const [annotations, setAnnotations] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [videoGalleryVisible, setVideoGalleryVisible] = useState(false);
   const [selectedAnnotation, setSelectedAnnotation] = useState<any>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const navigation = useNavigation();  // Initialize navigation
 
   const handleCreateAnnotation = (name: string, info: string) => {
     const newAnnotation = {
@@ -39,17 +39,19 @@ const Annotations = () => {
 
   const handleAttachVideo = (annotation: any) => {
     setSelectedAnnotation(annotation);
-    setVideoGalleryVisible(true);
+    navigation.navigate('VideoGallery', {
+      onVideoSelect: (videoPath: string) => {
+        handleVideoSelect(videoPath, annotation);
+      },
+    });
   };
 
-  const handleVideoSelect = (videoPath: string) => {
+  const handleVideoSelect = (videoPath: string, selectedAnnotation: any) => {
     setAnnotations((prev) =>
-      prev.map((annotation) =>
-        annotation.id === selectedAnnotation.id ? { ...annotation, video: videoPath } : annotation
+      prev.map((ann) =>
+        ann.id === selectedAnnotation.id ? { ...ann, video: videoPath } : ann
       )
     );
-    setSelectedAnnotation(null);
-    setVideoGalleryVisible(false);
   };
 
   return (
@@ -70,12 +72,6 @@ const Annotations = () => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onCreateAnnotation={handleCreateAnnotation}
-      />
-
-      <VideoGallery
-        visible={videoGalleryVisible}
-        onVideoSelect={handleVideoSelect}
-        onClose={() => setVideoGalleryVisible(false)}
       />
 
       {syncResult && (
