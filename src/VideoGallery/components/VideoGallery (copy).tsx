@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList } from 'react-native';
 import Video from 'react-native-video';
-import RNFS from 'react-native-fs';  // Import RNFS to access local files
+
+import { getVideosFromSnapmedia } from '../../native/MediaStoreBridge';
+
 
 interface VideoGalleryProps {
   visible: boolean;
@@ -14,25 +16,17 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ visible, onVideoSelect, onC
   const [videos, setVideos] = useState<string[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
-  // Fetch videos from app's local storage directory when the modal is opened
+  // Fetch videos from MediaStore when the modal is opened
   useEffect(() => {
     if (visible) {
-      // Path to the directory where the videos are stored
-      const videosDirectory = `${RNFS.ExternalDirectoryPath}/snapmedia/videos`;
-
-      // Read the files from the 'videos' directory
-      RNFS.readDir(videosDirectory)
-        .then((files) => {
-          // Filter out the files that are not videos (e.g., not ending with .mp4)
-          const videoPaths = files
-            .filter((file) => file.isFile() && file.name.endsWith('.mp4')) // You can adjust the extension if needed
-            .map((file) => file.path);
-
-          setVideos(videoPaths); // Set the video paths in the state
-        })
-        .catch((error) => {
-          console.error('Error reading videos directory:', error);
-        });
+      getVideosFromSnapmedia(
+        (videoPaths: any) => {
+          setVideos(videoPaths);
+        },
+        (error: string) => {
+          console.error('Error fetching videos:', error);
+        }
+      );
     }
   }, [visible]);
 

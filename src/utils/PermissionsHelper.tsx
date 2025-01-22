@@ -8,13 +8,19 @@ export const requestPermissions = async (): Promise<boolean> => {
         ? [
             PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
             PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
           ]
-        : [PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE];
+        : [
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+          ];
 
     try {
       const granted = await PermissionsAndroid.requestMultiple(permissions, {
         title: 'Media Permission',
-        message: 'App needs access to your media files (images and videos)',
+        message: 'App needs access to your camera and media files (images and videos)',
         buttonNeutral: 'Ask Me Later',
         buttonNegative: 'Cancel',
         buttonPositive: 'OK',
@@ -33,4 +39,3 @@ export const requestPermissions = async (): Promise<boolean> => {
 
   return true; // Assume true for iOS or other platforms
 };
-
