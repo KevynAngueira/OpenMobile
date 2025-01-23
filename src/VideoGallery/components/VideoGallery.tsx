@@ -2,12 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList } from 'react-native';
 import Video from 'react-native-video';
-import RNFS from 'react-native-fs';  // Import RNFS to access local files
-import { RouteProp } from '@react-navigation/native';  // Import RouteProp for route parameters
+import RNFS from 'react-native-fs';
+import { RouteProp } from '@react-navigation/native';
 
 interface VideoGalleryProps {
-  route: RouteProp<any, any>;  // Get route parameters
-  navigation: any;  // Navigation prop
+  route: RouteProp<any, any>; 
+  navigation: any;
 }
 
 const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
@@ -18,7 +18,6 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
   useEffect(() => {
     const videosDirectory = `${RNFS.ExternalDirectoryPath}/snapmedia/videos`;
 
-    // Read the files from the 'videos' directory
     RNFS.readDir(videosDirectory)
       .then((files) => {
         const videoPaths = files
@@ -32,11 +31,13 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
       });
   }, []);
 
+  // Handles callback to Annotations screen
   const handleVideoSelect = (videoPath: string) => {
-    route.params?.onVideoSelect?.(videoPath);
-    navigation.goBack();
+    console.log('Video selected:', videoPath)
+    navigation.navigate('Annotations', { selectedVideo: videoPath});
   };
 
+  // Renders video item
   const renderItem = ({ item }: { item: string }) => {
     return (
       <View style={styles.videoItem}>
@@ -47,23 +48,43 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
       </View>
     );
   };
+  
+  // If videoUri is passed via params, auto-select that video
+  useEffect(() => {
+    if (route.params?.selectedVideo) {
+      handleVideoSelect(route.params.selectedVideo);
+    }
+  }, [route.params?.selectedVideo]);
 
+  // Displays a list of selectable videos and offers the ability to record a new one
   return (
     <View style={styles.modalContent}>
+      
+      {/* Selectable Video List */}
       <Text style={styles.modalHeader}>Select Video</Text>
       <FlatList
         data={videos}
         renderItem={renderItem}
         keyExtractor={(item, index) => index.toString()}
       />
+      
+      {/* Open Camera Button */}
+      <TouchableOpacity onPress={() => navigation.navigate('CameraScreen')} style={styles.openCameraButton}>
+        <Text style={styles.openCameraButtonText}>Open Camera</Text>
+      </TouchableOpacity>
+      
+      {/* Close Button */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
         <Text style={styles.closeButtonText}>Close</Text>
       </TouchableOpacity>
+      
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  
+  // Modal styles
   modalContent: {
     flex: 1,
     padding: 20,
@@ -74,6 +95,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
   },
+  
+  // Video styles
   videoItem: {
     marginBottom: 15,
     borderBottomWidth: 1,
@@ -85,6 +108,8 @@ const styles = StyleSheet.create({
     height: 200,
     backgroundColor: '#f0f0f0',
   },
+  
+  // Select Button styles
   selectButton: {
     backgroundColor: '#1E3A5F',
     padding: 10,
@@ -95,6 +120,20 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
   },
+  
+  // Open Camera Button styles
+  openCameraButton: {
+    backgroundColor: '#4CAF50',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  openCameraButtonText: {
+    color: 'white',
+    textAlign: 'center',
+  },
+  
+  // Close Button styles
   closeButton: {
     backgroundColor: 'gray',
     padding: 10,

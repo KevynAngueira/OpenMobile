@@ -1,11 +1,13 @@
 // CameraScreen.tsx
 import React, { useRef, useState } from 'react';
-import { Text, StyleSheet, View, Button } from 'react-native';
+import { Text, StyleSheet, View, Button, Modal, TouchableOpacity } from 'react-native';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
 
-const CameraScreen = () => {
+const CameraScreen = ({ navigation }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);  // To show options after recording
   const camera = useRef<Camera>(null);
   const devices = useCameraDevices();
   const device = devices?.find((d) => d.position === 'back');
@@ -27,12 +29,9 @@ const CameraScreen = () => {
       const video = await camera.current.startRecording({
         onRecordingFinished: async (video) => {
           const videoUri = video.path;  // Get the video URI
-
-          // Save the video to the "snapmedia/videos" directory
-          const savedVideoPath = await saveVideo(videoUri);
-          console.log('Video saved to:', savedVideoPath);
-
+          setVideoUri(videoUri); // Set the video URI for later options
           setIsRecording(false);
+          setModalVisible(true); // Show modal with options
         },
         onRecordingError: (error) => {
           console.error('Recording error:', error);
@@ -79,6 +78,31 @@ const CameraScreen = () => {
     }
   };
 
+  const handleSelectVideo = async () => {
+    // Pass the video URI to VideoGallery for selection
+    if (videoUri) {
+      await saveVideo(videoUri);
+      console.log('Video selected from Camera:', videoUri)
+      navigation.navigate('VideoGallery', { selectedVideo: videoUri }); 
+    }
+    setModalVisible(false);  // Close the modal after selection
+  };
+
+  const handleSaveVideo = async () => {
+    // Save the video for later and continue recording
+    if (videoUri) {
+      await saveVideo(videoUri);
+      console.log('Video saved for later:', videoUri);
+    }
+    setModalVisible(false);  // Close the modal after saving
+  };
+
+  const handleDiscardVideo = () => {
+    // Discard the video and continue recording
+    setVideoUri(null);
+    setModalVisible(false);  // Close the modal after discard
+  };
+
   return device ? (
     <View style={styles.container}>
       <Camera
@@ -94,6 +118,24 @@ const CameraScreen = () => {
         <Button title="Take Photo" onPress={takePhoto} />
         <Button title={isRecording ? 'Stop Recording' : 'Record Video'} onPress={recordVideo} />
       </View>
+
+      {/* Modal for options after video recording */}
+      <Modal visible={modalVisible} transparent={true} animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Choose an option</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={handleSelectVideo}>
+              <Text style={styles.modalButtonText}>Select</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalButton} onPress={handleSaveVideo}>
+              <Text style={styles.modalButtonText}>Save for Later</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalButton} onPress={handleDiscardVideo}>
+              <Text style={styles.modalButtonText}>Discard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   ) : (
     <View style={styles.container}>
@@ -113,6 +155,46 @@ const styles = StyleSheet.create({
     right: 20,
     flexDirection: 'row',
     justifyContent: 'space-around',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: '#1E3A5F',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    width: '100%',
+  },
+  modalButtonText: {
+    color: 'white',
+    textAlign: 'center',
+  },
+  closeModalButton: {
+    backgroundColor: 'gray',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    width: '100%',
+  },
+  closeModalButtonText: {
+    color: 'white',
+    textAlign: 'center',
   },
 });
 

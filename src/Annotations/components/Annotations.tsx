@@ -2,20 +2,26 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';  // Import useNavigation
+import { RouteProp, useNavigation } from '@react-navigation/native';  // Import useNavigation
 
 import AnnotationList from './AnnotationList';
 import AnnotationModal from './AnnotationModal';
+import { useAnnotations } from '../context/AnnotationsContext';
 import { handleSync, handleSendAnnotationsVideos } from '../services/AnnotationActions';
 import { FLASK_URL, HUB_BASE_URL } from '../../constants/Config';
 
-const Annotations = () => {
-  const [annotations, setAnnotations] = useState<any[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedAnnotation, setSelectedAnnotation] = useState<any>(null);
-  const [syncResult, setSyncResult] = useState<string | null>(null);
-  const navigation = useNavigation();  // Initialize navigation
+interface AnnotationsProps {
+  route: RouteProp<any, any>; 
+  navigation: any;
+}
 
+const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
+  const { annotations, setAnnotations, selectedAnnotation, setSelectedAnnotation } = useAnnotations();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  navigation = useNavigation();
+
+  // Creates an annotation
   const handleCreateAnnotation = (name: string, info: string) => {
     const newAnnotation = {
       id: Date.now(),
@@ -27,6 +33,7 @@ const Annotations = () => {
     setModalVisible(false);
   };
 
+  // Deletes an annotation
   const handleDeleteAnnotation = (id: number) => {
     Alert.alert("Confirm Deletion", "Are you sure you want to delete this annotation group?", [
       { text: "Cancel", style: "cancel" },
@@ -37,15 +44,13 @@ const Annotations = () => {
     ]);
   };
 
+  // Prompts you to attach a video from the VideoGallery screen
   const handleAttachVideo = (annotation: any) => {
     setSelectedAnnotation(annotation);
-    navigation.navigate('VideoGallery', {
-      onVideoSelect: (videoPath: string) => {
-        handleVideoSelect(videoPath, annotation);
-      },
-    });
+    navigation.navigate('VideoGallery')
   };
-
+  
+  // Upon video selection, attaches the video to the annotation
   const handleVideoSelect = (videoPath: string, selectedAnnotation: any) => {
     setAnnotations((prev) =>
       prev.map((ann) =>
@@ -53,33 +58,45 @@ const Annotations = () => {
       )
     );
   };
+  
+  // If videoUri is passed via params, auto-select that video
+  useEffect(() => {
+    if (route.params?.selectedVideo) {
+      handleVideoSelect(route.params.selectedVideo, selectedAnnotation);
+    }
+  }, [route.params?.selectedVideo]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Annotations</Text>
-
+      
+      {/* Create Annotation Button */}
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.addButtonText}>+ Add Annotation Group</Text>
       </TouchableOpacity>
 
+      {/* Annotations List */}
       <AnnotationList
         annotations={annotations}
         onAttachVideo={handleAttachVideo}
         onDeleteAnnotation={handleDeleteAnnotation}
       />
 
+      {/* Modal to create annotations */}
       <AnnotationModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onCreateAnnotation={handleCreateAnnotation}
       />
 
+      {/* Sync Results Display */}
       {syncResult && (
         <View style={styles.syncResultContainer}>
           <Text style={styles.syncResultText}>{syncResult}</Text>
         </View>
       )}
 
+      {/* Sync Button */}
       <TouchableOpacity
         style={styles.syncButton}
         onPress={() =>
@@ -88,6 +105,7 @@ const Annotations = () => {
       >
         <Text style={styles.syncButtonText}>Sync</Text>
       </TouchableOpacity>
+      
     </View>
   );
 };
