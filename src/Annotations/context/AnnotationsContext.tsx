@@ -1,6 +1,5 @@
-// AnnotationsContext.tsx (or wherever your context is defined)
-
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Annotation {
   id: number;
@@ -26,9 +25,40 @@ export const useAnnotations = () => {
   return context;
 };
 
+const ANNOTATIONS_STORAGE_KEY = '@annotations';
+
 export const AnnotationsProvider: React.FC = ({ children }) => {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [selectedAnnotation, setSelectedAnnotation] = useState<Annotation | null>(null);
+
+  // Load annotations from AsyncStorage when the app starts
+  useEffect(() => {
+    const loadAnnotations = async () => {
+      try {
+        const storedAnnotations = await AsyncStorage.getItem(ANNOTATIONS_STORAGE_KEY);
+        if (storedAnnotations) {
+          setAnnotations(JSON.parse(storedAnnotations));
+        }
+      } catch (error) {
+        console.error('Failed to load annotations:', error);
+      }
+    };
+
+    loadAnnotations();
+  }, []);
+
+  // Save annotations to AsyncStorage whenever they change
+  useEffect(() => {
+    const saveAnnotations = async () => {
+      try {
+        await AsyncStorage.setItem(ANNOTATIONS_STORAGE_KEY, JSON.stringify(annotations));
+      } catch (error) {
+        console.error('Failed to save annotations:', error);
+      }
+    };
+
+    saveAnnotations();
+  }, [annotations]);
 
   return (
     <AnnotationsContext.Provider value={{ annotations, setAnnotations, selectedAnnotation, setSelectedAnnotation }}>
