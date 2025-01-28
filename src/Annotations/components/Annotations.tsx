@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { RouteProp, useNavigation } from '@react-navigation/native';  // Import useNavigation
+import { RouteProp, useNavigation } from '@react-navigation/native'; 
 
 import AnnotationList from './AnnotationList';
 import AnnotationModal from './AnnotationModal';
@@ -51,7 +51,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   };
   
   // Upon video selection, attaches the video to the annotation
-  const handleVideoSelect = (videoPath: string, selectedAnnotation: any) => {
+  const handleVideoSelect = (videoPath: string) => {
     setAnnotations((prev) =>
       prev.map((ann) =>
         ann.id === selectedAnnotation.id ? { ...ann, video: videoPath } : ann
@@ -62,7 +62,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   // If videoUri is passed via params, auto-select that video
   useEffect(() => {
     if (route.params?.selectedVideo) {
-      handleVideoSelect(route.params.selectedVideo, selectedAnnotation);
+      handleVideoSelect(route.params.selectedVideo);
     }
   }, [route.params?.selectedVideo]);
 
@@ -72,7 +72,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       
       {/* Create Annotation Button */}
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Text style={styles.addButtonText}>+ Add Annotation Group</Text>
+        <Text style={styles.addButtonText}>+ Add Annotation</Text>
       </TouchableOpacity>
 
       {/* Annotations List */}

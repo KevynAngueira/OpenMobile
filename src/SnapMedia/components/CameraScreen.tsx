@@ -3,11 +3,15 @@ import React, { useRef, useState } from 'react';
 import { Text, StyleSheet, View, Button, Modal, TouchableOpacity } from 'react-native';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
+import CircleTimer from './CircleTimer';
 
 const CameraScreen = ({ navigation }) => {
+  // Video and Recording
   const [isRecording, setIsRecording] = useState(false);
   const [videoUri, setVideoUri] = useState<string | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);  // To show options after recording
+  // Select, Save, and Discard Modal
+  const [modalVisible, setModalVisible] = useState(false);
+  //Camera and Device
   const camera = useRef<Camera>(null);
   const devices = useCameraDevices();
   const device = devices?.find((d) => d.position === 'back');
@@ -15,7 +19,7 @@ const CameraScreen = ({ navigation }) => {
   const takePhoto = async () => {
     if (camera.current) {
       const photo = await camera.current.takePhoto();
-      const photoUri = photo.path;  // Get the photo URI
+      const photoUri = photo.path; 
 
       // Save the image to the "snapmedia/images" directory
       const savedImagePath = await saveImage(photoUri);
@@ -23,22 +27,36 @@ const CameraScreen = ({ navigation }) => {
     }
   };
 
+  // Records a 10second or less video, then prompts user to select, save, or discard the video
   const recordVideo = async () => {
-    if (camera.current && !isRecording) {
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  };
+  
+  const startRecording = async() => {
+    if(camera.current) {
+      stopRecording()
       setIsRecording(true);
       const video = await camera.current.startRecording({
         onRecordingFinished: async (video) => {
-          const videoUri = video.path;  // Get the video URI
-          setVideoUri(videoUri); // Set the video URI for later options
+          const videoUri = video.path; 
+          setVideoUri(videoUri); 
           setIsRecording(false);
-          setModalVisible(true); // Show modal with options
+          setModalVisible(true);
         },
         onRecordingError: (error) => {
           console.error('Recording error:', error);
           setIsRecording(false);
         },
       });
-    } else if (isRecording) {
+    }
+  };
+  
+  const stopRecording = async() => {
+    if (camera.current) {
       await camera.current.stopRecording();
       setIsRecording(false);
     }
@@ -115,9 +133,17 @@ const CameraScreen = ({ navigation }) => {
         audio={false}
       />
       <View style={styles.controls}>
-        <Button title="Take Photo" onPress={takePhoto} />
         <Button title={isRecording ? 'Stop Recording' : 'Record Video'} onPress={recordVideo} />
       </View>
+
+      {/* Circle Countdown */}
+      {true && (
+        <CircleTimer
+          duration={10}
+          isRecording={isRecording}
+          onFinish = {stopRecording}
+        />
+      )}
 
       {/* Modal for options after video recording */}
       <Modal visible={modalVisible} transparent={true} animationType="fade">
@@ -130,8 +156,8 @@ const CameraScreen = ({ navigation }) => {
             <TouchableOpacity style={styles.modalButton} onPress={handleSaveVideo}>
               <Text style={styles.modalButtonText}>Save for Later</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButton} onPress={handleDiscardVideo}>
-              <Text style={styles.modalButtonText}>Discard</Text>
+            <TouchableOpacity style={styles.discardModalButton} onPress={handleDiscardVideo}>
+              <Text style={styles.discardModalButtonText}>Discard</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -185,14 +211,14 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
   },
-  closeModalButton: {
-    backgroundColor: 'gray',
+  discardModalButton: {
+    backgroundColor: 'red',
     padding: 10,
     borderRadius: 5,
     marginTop: 10,
     width: '100%',
   },
-  closeModalButtonText: {
+  discardModalButtonText: {
     color: 'white',
     textAlign: 'center',
   },

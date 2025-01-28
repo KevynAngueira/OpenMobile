@@ -4,6 +4,7 @@ import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList, Alert } from
 import Video from 'react-native-video';
 import RNFS from 'react-native-fs';
 import { RouteProp } from '@react-navigation/native';
+import { useAnnotations } from '../../Annotations/context/AnnotationsContext';
 
 interface VideoGalleryProps {
   route: RouteProp<any, any>; 
@@ -11,7 +12,10 @@ interface VideoGalleryProps {
 }
 
 const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
-  const [videos, setVideos] = useState<string[]>([]);
+  const { annotations, setAnnotations, selectedAnnotation, setSelectedAnnotation } = useAnnotations();	
+  const [videos, setVideos] = useState<string[]>([]);  
+  const [attachedDropdownOpen, setAttachedDropdownOpen] = useState(false);
+  const [unattachedDropdownOpen, setUnattachedDropdownOpen] = useState(true);
   const [hoveredDelete, setHoveredDelete] = useState<string | null>(null);
   const [deleteAllHovered, setDeleteAllHovered] = useState(false);
 
@@ -30,12 +34,48 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
       .catch((error) => {
         console.error('Error reading videos directory:', error);
       });
-  }, []);
+  }, [])
+  
+  // Split videos into attached and unattached
+  const attachedVideos = videos.filter((video) =>
+    annotations.some((annotation) => annotation.video === video)
+  );
+  
+  const unattachedVideos = videos.filter(
+    (video) => !annotations.some((annotation) => annotation.video === video)
+  );      
 
   // Handles callback to Annotations screen
   const handleVideoSelect = (videoPath: string) => {
-    console.log('Video selected:', videoPath);
-    navigation.navigate('Annotations', { selectedVideo: videoPath });
+    const annotationUsingVideo = annotations.find((annotation) => annotation.video === videoPath);
+
+    if (annotationUsingVideo) {
+      Alert.alert(
+        'Video Already Attached',
+        `This video is already attached to "${annotationUsingVideo.name}". Do you want to remove it and attach it to "${selectedAnnotation.name}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Confirm',
+            style: 'destructive',
+            onPress: () => {
+              // Remove the video from the old annotation
+              const updatedAnnotations = annotations.map((annotation) =>
+                annotation.video === videoPath ? { ...annotation, video: null } : annotation
+              );
+              setAnnotations(updatedAnnotations);
+
+              // Navigate back with the selected video
+              console.log('Video selected:', videoPath);
+              navigation.navigate('Annotations', { selectedVideo: videoPath });
+            },
+          },
+        ]
+      );
+    } else {
+      console.log('Video selected:', videoPath);
+      navigation.navigate('Annotations', { selectedVideo: videoPath });
+    }
   };
 
   // If videoUri is passed via params, auto-select that video
@@ -70,50 +110,98 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     );
   };
 
-  // Handle delete all videos
+  // Handle delete all unattached videos
   const handleDeleteAllVideos = () => {
     Alert.alert(
-      'Delete All Videos',
-      'Are you sure you want to delete all videos?',
+      'Delete All Unattached Videos',
+      'Are you sure you want to delete all unattached videos?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete All',
           style: 'destructive',
           onPress: () => {
-            Promise.all(videos.map((videoPath) => RNFS.unlink(videoPath)))
+            // Delete only unattached videos
+            Promise.all(unattachedVideos.map((videoPath) => RNFS.unlink(videoPath)))
               .then(() => {
-                setVideos([]);
-                console.log('All videos deleted');
+                setVideos((prevVideos) => prevVideos.filter((video) => !unattachedVideos.includes(video)));
+                console.log('Deleted All Unattached Videos');
               })
               .catch((error) => {
-                console.error('Error deleting all videos:', error);
+                console.error('Error deleting unattached videos:', error);
               });
           },
         },
       ]
     );
   };
+  
+  // Handle deselecting a video from its annotation
+  const handleDeselectVideo = (videoPath: string) => {
+    const annotationUsingVideo = annotations.find((annotation) => annotation.video === videoPath);
+
+    if (annotationUsingVideo) {
+      Alert.alert(
+        'Deselect Video',
+        `Are you sure you want to deselect this video from "${annotationUsingVideo.name}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Deselect',
+            style: 'destructive',
+            onPress: () => {
+              const updatedAnnotations = annotations.map((annotation) =>
+                annotation.video === videoPath ? { ...annotation, video: null } : annotation
+              );
+              setAnnotations(updatedAnnotations);
+            },
+          },
+        ]
+      );
+    }
+  };
+  
+  const toggleDropdown = (dropdown: 'attached' | 'unattached') => {
+    if (dropdown === 'attached') {
+      setAttachedDropdownOpen(!attachedDropdownOpen);
+      if (unattachedDropdownOpen) setUnattachedDropdownOpen(false);
+    } else {
+      setUnattachedDropdownOpen(!unattachedDropdownOpen);
+      if (attachedDropdownOpen) setAttachedDropdownOpen(false);
+    }
+  };
 
   // Renders video item
   const renderItem = ({ item }: { item: string }) => {
+    const annotationUsingVideo = annotations.find((annotation) => annotation.video === item);
+  
     return (
       <View style={styles.videoItem}>
         <Video source={{ uri: item }} style={styles.videoPreview} paused={true} controls />
 
-        {/* Delete Button */}
-        <TouchableOpacity
-          onPressIn={() => setHoveredDelete(item)}
-          onPressOut={() => setHoveredDelete(null)}
-          onPress={() => handleDeleteVideo(item)}
-          style={[
-            styles.deleteButton,
-            hoveredDelete === item && styles.deleteButtonHovered,
-          ]}
-        >
-          <Text style={styles.deleteButtonText}>X</Text>
-        </TouchableOpacity>
 
+	{/* Tag or Delete Button */}
+        {annotationUsingVideo ? (
+          <TouchableOpacity
+            onPress={() => handleDeselectVideo(item)}
+            style={styles.tagButton}
+          >
+            <Text style={styles.tagButtonText}>{annotationUsingVideo.name}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPressIn={() => setHoveredDelete(item)}
+            onPressOut={() => setHoveredDelete(null)}
+            onPress={() => handleDeleteVideo(item)}
+            style={[
+              styles.deleteButton,
+              hoveredDelete === item && styles.deleteButtonHovered,
+            ]}
+          >
+            <Text style={styles.deleteButtonText}>X</Text>
+          </TouchableOpacity>
+        )}
+        
         {/* Select Button */}
         <TouchableOpacity
           onPress={() => handleVideoSelect(item)}
@@ -143,13 +231,42 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
           <Text style={styles.deleteAllButtonText}>Delete All</Text>
         </TouchableOpacity>
       </View>
+      
+      {/* Attached Videos Section */}
+      <TouchableOpacity
+        onPress={() => toggleDropdown('attached')}
+        style={styles.dropdownHeader}
+      >
+        <Text style={styles.dropdownHeaderText}>
+          {attachedDropdownOpen ? '▼' : '▶'} Attached Videos
+        </Text>
+      </TouchableOpacity>
+      {attachedDropdownOpen && (
+        <FlatList
+          data={attachedVideos}
+          renderItem={renderItem}
+          keyExtractor={(item) => item}
+          style={styles.dropdownList}
+        />
+      )}
 
-      {/* Selectable Video List */}
-      <FlatList
-        data={videos}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-      />
+      {/* Unattached Videos Section */}
+      <TouchableOpacity
+        onPress={() => toggleDropdown('unattached')}
+        style={styles.dropdownHeader}
+      >
+        <Text style={styles.dropdownHeaderText}>
+          {unattachedDropdownOpen ? '▼' : '▶'} Unattached Videos
+        </Text>
+      </TouchableOpacity>
+      {unattachedDropdownOpen && (
+        <FlatList
+          data={unattachedVideos}
+          renderItem={renderItem}
+          keyExtractor={(item) => item}
+          style={styles.dropdownList}
+        />
+      )}
 
       {/* Open Camera Button */}
       <TouchableOpacity
@@ -190,6 +307,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
+  // Dropdown styles
+  dropdownHeader: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  dropdownHeaderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  dropdownList: {
+    marginVertical: 10,
+  },
+  
   // Video styles
   videoItem: {
     marginBottom: 15,
@@ -204,7 +335,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   
-  // Delete All Button
+  // Delete All Button styles
   deleteAllButton: {
     backgroundColor: 'transparent',
     padding: 10,
@@ -238,6 +369,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  
+  // Tag Button styles
+  tagButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#1E3A5F',
+    padding: 5,
+    borderRadius: 5,
+  },
+  tagButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+
 
   // Select Button styles
   selectButton: {
