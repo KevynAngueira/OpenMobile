@@ -100,7 +100,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       <TouchableOpacity
         style={styles.syncButton}
         onPress={() =>
-          handleSendAnnotationsVideos(annotations, `${HUB_BASE_URL}upload.py`, setSyncResult)
+          handleSendAnnotationsVideos(annotations, setSyncResult)
         }
       >
         <Text style={styles.syncButtonText}>Sync</Text>
