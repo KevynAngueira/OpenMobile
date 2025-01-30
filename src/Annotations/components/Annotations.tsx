@@ -7,7 +7,8 @@ import { RouteProp, useNavigation } from '@react-navigation/native';
 import AnnotationList from './AnnotationList';
 import AnnotationModal from './AnnotationModal';
 import { useAnnotations } from '../context/AnnotationsContext';
-import { handleSync, handleSendAnnotationsVideos } from '../services/AnnotationActions';
+import { useSync } from '../../Sync/context/SyncContext';
+import useHandleSync from '../services/AnnotationActions';
 import { FLASK_URL, HUB_BASE_URL } from '../../constants/Config';
 
 interface AnnotationsProps {
@@ -17,8 +18,10 @@ interface AnnotationsProps {
 
 const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { annotations, setAnnotations, selectedAnnotation, setSelectedAnnotation } = useAnnotations();
+  const { syncEntries } = useSync();
   const [modalVisible, setModalVisible] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const { handleSync } = useHandleSync();
   navigation = useNavigation();
 
   // Creates an annotation
@@ -78,6 +81,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       {/* Annotations List */}
       <AnnotationList
         annotations={annotations}
+        syncEntries={syncEntries}
         onAttachVideo={handleAttachVideo}
         onDeleteAnnotation={handleDeleteAnnotation}
       />
@@ -100,7 +104,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       <TouchableOpacity
         style={styles.syncButton}
         onPress={() =>
-          handleSendAnnotationsVideos(annotations, setSyncResult)
+          handleSync(annotations, setSyncResult)
         }
       >
         <Text style={styles.syncButtonText}>Sync</Text>

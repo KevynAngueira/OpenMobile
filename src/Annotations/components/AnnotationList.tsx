@@ -4,58 +4,78 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Video from 'react-native-video';
 
-const AnnotationList = ({ annotations, onAttachVideo, onDeleteAnnotation }) => {
+const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnotation }) => {
   const [expandedAnnotation, setExpandedAnnotation] = React.useState<any>(null);
 
   const handleToggleDropdown = (annotation: any) => {
     setExpandedAnnotation(expandedAnnotation?.id === annotation.id ? null : annotation);
   };
+  
+  const findSyncEntryForAnnotation = (videoPath: string) => {
+    return syncEntries.find((entry) => entry.videoPath === videoPath);
+  };
 
   return (
     <>
-      {annotations.map((annotation) => (
-        <View key={annotation.id} style={styles.annotationContainer}>
-          <TouchableOpacity
-            onPress={() => handleToggleDropdown(annotation)}
-            style={styles.annotationHeader}
-          >
-            <Text style={styles.annotationTitle}>{annotation.name}</Text>
-            <Ionicons name="chevron-down" size={20} color="black" />
-          </TouchableOpacity>
+      {annotations.map((annotation) => {
+        const syncEntry = findSyncEntryForAnnotation(annotation.video);
 
-          {expandedAnnotation?.id === annotation.id && (
-            <View style={styles.dropdown}>
-              <Text style={styles.videoText}>Info: {annotation.info}</Text>
-              
-              {annotation.video ? (
-                <View style={styles.videoContainer}>
-                  <Text style={styles.videoText}>Attached Video: {annotation.video}</Text>
-                  <Video
-                    source={{ uri: annotation.video }} // Display the attached video
-                    style={styles.videoPlayer}
-                    controls={true} // Show controls (play, pause, volume)
-                    resizeMode="contain"
-                    paused={false} // Auto-play
-                  />
-                </View>
-              ) : null}
-              
-              <TouchableOpacity
-                style={styles.attachButton}
-                onPress={() => onAttachVideo(annotation)}
-              >
-                <Text style={styles.attachButtonText}>Attach Video</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => onDeleteAnnotation(annotation.id)}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      ))}
+        return (
+          <View key={annotation.id} style={styles.annotationContainer}>
+            <TouchableOpacity
+              onPress={() => handleToggleDropdown(annotation)}
+              style={styles.annotationHeader}
+            >
+              <Text style={styles.annotationTitle}>{annotation.name}</Text>
+              <Ionicons
+                name={syncEntry ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={syncEntry ? 'green' : 'red'}
+              />
+            </TouchableOpacity>
+
+            {expandedAnnotation?.id === annotation.id && (
+              <View style={styles.dropdown}>
+                <Text style={styles.videoText}>Info: {annotation.info}</Text>
+
+                {annotation.video ? (
+                  <View style={styles.videoContainer}>
+                    <Text style={styles.videoText}>Attached Video: {annotation.video}</Text>
+                    <Video
+                      source={{ uri: annotation.video }} // Display the attached video
+                      style={styles.videoPlayer}
+                      controls={true} // Show controls (play, pause, volume)
+                      resizeMode="contain"
+                      paused={false} // Auto-play
+                    />
+                  </View>
+                ) : null}
+
+                {/* Display the inference results */}
+                {syncEntry && (
+                  <View style={styles.resultsContainer}>
+                    <Text style={styles.resultsText}>Inference Result: {JSON.stringify(syncEntry.inferenceResponse)}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={styles.attachButton}
+                  onPress={() => onAttachVideo(annotation)}
+                >
+                  <Text style={styles.attachButtonText}>Attach Video</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => onDeleteAnnotation(annotation.id)}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        );
+      })}
     </>
   );
 };
