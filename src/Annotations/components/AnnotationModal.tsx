@@ -5,6 +5,8 @@ import { Modal, View, Text, TextInput, StyleSheet, Button } from 'react-native';
 const AnnotationModal = ({ visible, onClose, onCreateAnnotation }) => {
   const [name, setName] = useState('');
   const [info, setInfo] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
 
   const handleCreate = () => {
     onCreateAnnotation(name, info);
@@ -18,13 +20,13 @@ const AnnotationModal = ({ visible, onClose, onCreateAnnotation }) => {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>New Annotation Group</Text>
           <TextInput
-            placeholder="Enter group name"
+            placeholder="Enter annotation name"
             style={styles.input}
             value={name}
             onChangeText={setName}
           />
           <TextInput
-            placeholder="Enter group info"
+            placeholder="Enter annotation info"
             style={styles.input}
             value={info}
             onChangeText={setInfo}

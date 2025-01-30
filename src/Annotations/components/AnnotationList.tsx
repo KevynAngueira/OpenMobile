@@ -37,7 +37,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnot
             {expandedAnnotation?.id === annotation.id && (
               <View style={styles.dropdown}>
                 <Text style={styles.videoText}>Info: {annotation.info}</Text>
-
+             
                 {annotation.video ? (
                   <View style={styles.videoContainer}>
                     <Text style={styles.videoText}>Attached Video: {annotation.video}</Text>
