@@ -3,13 +3,16 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { sendMedia } from '../../utils/MediaUploader';
-import { HUB_BASE_URL } from '../../constants/Config';
+//import { HUB_BASE_URL } from '../../constants/Config';
+import { FLASK_URL } from '../../constants/Config';
 
 
 interface SyncEntry {
-  id: string; // Unique identifier for the video file (e.g., filename or hash)
+  id: string;
   videoPath: string;
-  uploadStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
+  params?: Record<string, any>;
+  videoStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
+  paramStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
   inferenceStatus: 'pending' | 'running' | 'completed' | 'failed';
   uploadResponse?: any;
   inferenceResponse?: any;
@@ -73,7 +76,7 @@ export const SyncProvider: React.FC = ({ children }) => {
     const newEntry: SyncEntry = {
       id,
       videoPath,
-      uploadStatus: 'new',
+      videoStatus: 'new',
       inferenceStatus: 'pending',
     };
     setSyncEntries((prev) => [...prev, newEntry]);
@@ -94,17 +97,29 @@ export const SyncProvider: React.FC = ({ children }) => {
 
     for (const entry of updatedEntries) {
       console.log('Checking upload status for: ', entry.id);
-      if (entry.uploadStatus === 'uploaded') {
+      if (entry.videoStatus === 'uploaded') {
         console.log('Skipping Upload: ', entry.id);
         setSyncResult(`Upload Response: skipping ${entry.id}`);
         continue;
       }
 
       try {
-        if (entry.uploadStatus !== 'uploading') {
-          entry.uploadStatus = 'uploading';
-          const uploadResponse = await sendMedia('video', [entry.videoPath], `${HUB_BASE_URL}upload.py`);
-          entry.uploadStatus = 'uploaded';
+        if ((entry.videoStatus !== 'uploading') || (entry.paramStatus !== 'uploading')) {
+          entry.videoStatus = 'uploading';
+          entry.paramStatus = 'uploading';
+
+          const uploadResponse = await sendMedia(
+            'video',
+            [{
+              path: entry.videoPath,
+              params: entry.params
+            }],
+            `${FLASK_URL}/video/send`
+          );          
+
+          entry.videoStatus = 'uploaded';
+          entry.paramStatus = 'uploaded';
+          
           entry.uploadResponse = uploadResponse[0].data;
           console.log('Upload Response: ', entry.uploadResponse);
           setSyncResult(`Upload Response: ${entry.uploadResponse}`);
@@ -112,7 +127,7 @@ export const SyncProvider: React.FC = ({ children }) => {
       } catch (error) {
         console.error('Sync error for video upload:', entry.videoPath, error);
         setSyncResult(`Upload Failed: ${entry.id} => ${error.message}`);
-        entry.uploadStatus = 'failed';
+        entry.videoStatus = 'failed';
         
       }
     }
@@ -125,7 +140,7 @@ export const SyncProvider: React.FC = ({ children }) => {
 
     for (const entry of updatedEntries) {
       console.log('Checking completed status for: ', entry.id);
-      if (entry.inferenceStatus === 'completed' || entry.uploadStatus !== 'uploaded') {
+      if (entry.inferenceStatus === 'completed' || entry.videoStatus !== 'uploaded') {
         console.log('Skipping Inference: ', entry.id);
         setSyncResult(`Inference Response: skipping ${entry.id}`);
         continue;
@@ -135,7 +150,7 @@ export const SyncProvider: React.FC = ({ children }) => {
         if (entry.inferenceStatus !== 'completed') {
           entry.inferenceStatus = 'running';
           const fileNameWithoutExtension = entry.id.replace(/\.[^/.]+$/, '');
-          const inferenceResponse = await fetch(`${HUB_BASE_URL}/inferenceVid.py?p1=${fileNameWithoutExtension}&p2=json`);
+          const inferenceResponse = await fetch(`${FLASK_URL}/inference/${fileNameWithoutExtension}`);
           const inferenceJson = await inferenceResponse.json();
           entry.inferenceStatus = 'completed';
           entry.inferenceResponse = inferenceJson;
@@ -153,33 +168,49 @@ export const SyncProvider: React.FC = ({ children }) => {
     return updatedEntries;
   };
   
-  const syncAllPending = async (videosToSend: string[], setSyncResult: (message: string) => void) => {
-    let updatedEntries = [...syncEntries];
+  const syncAllPending = async (
+    mediaItems: {path: string; params?: Record<string, any>}[], 
+    setSyncResult: (message: string) => void
+  ) => {
+    let updatedEntries = ([...(syncEntries || [])]).filter(Boolean);
   
     // Step 1: Remove deprecated entries
     console.log('== Removing Deprecated Entries ==');
-    updatedEntries = updatedEntries.filter((entry) =>
-      videosToSend.includes(entry.videoPath)
-    );
+    updatedEntries = updatedEntries.filter((entry) =>{
+      return mediaItems.some((item) => item.path === entry.videoPath)
+    });
     setSyncEntries(updatedEntries);
   
+    console.log(updatedEntries); // Debug log
+
     // Step 2: Create new entries
     console.log('== Creating New Entries');
-     for (const videoPath of videosToSend) {
-      const id = videoPath.split('/').pop();
-      if (updatedEntries.some((entry) => entry.id === id)) {
-        continue; 
+    for (const item of mediaItems) {
+      const id = item.path.split('/').pop();
+      if (!updatedEntries.some((entry) => entry.id === id)) {
+        const newEntry: SyncEntry = {
+          id: id,
+          videoPath: item.path,
+          params: item.params,
+          videoStatus: 'new',
+          inferenceStatus: 'pending',
+        };
+        updatedEntries.push(newEntry);      
+      } else {
+        updatedEntries = updatedEntries.map((entry) => 
+          ((entry.id === id) && (JSON.stringify(entry.params) !== JSON.stringify(item.params))) ?
+            {
+              ...entry,
+              params: item.params,
+              paramStatus: 'new',
+              inferenceStatus: 'pending',
+            } : entry
+        );
       }
-
-      const newEntry: SyncEntry = {
-        id,
-        videoPath,
-        uploadStatus: 'new',
-        inferenceStatus: 'pending',
-      };
-      updatedEntries.push(newEntry);
     }
     setSyncEntries(updatedEntries);
+
+    console.log(updatedEntries); // Debug log
     
     // Step 3: Upload videos
     console.log('== Start Video Upload ==');
@@ -213,4 +244,3 @@ export const SyncProvider: React.FC = ({ children }) => {
     </SyncContext.Provider>
   );
 };
-

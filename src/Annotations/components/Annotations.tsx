@@ -22,19 +22,53 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const [modalVisible, setModalVisible] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
+  const { removeSyncEntry } = useSync();
   navigation = useNavigation();
 
   // Creates an annotation
-  const handleCreateAnnotation = (name: string, info: string) => {
+  const handleCreateAnnotation = (
+    name: string, 
+    latitude: string, 
+    longitude: string, 
+    info: string,
+    length: string,
+    leafNumber: string,
+    leafWidths: string[],
+    id?: number,
+    video?: string
+  ) => {
+    const parsedLeafWidths = leafWidths.map((w) => parseFloat(w)).filter((n) => !isNaN(n))
+
     const newAnnotation = {
-      id: Date.now(),
+      id: id || Date.now(),
+      video: video || null,
       name,
       info,
-      video: null,
+      location: {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+      },
+      length: parseFloat(length),
+      leafNumber: parseInt(leafNumber),
+      leafWidths: parsedLeafWidths
     };
-    setAnnotations((prev) => [...prev, newAnnotation]);
+
+    setAnnotations((prev) => {
+      if (id) {
+        return prev.map((ann) => (ann.id === id ? newAnnotation : ann));
+      }
+      return [...prev, newAnnotation];
+    });
+
     setModalVisible(false);
   };
+
+  // Edits an annotation
+  const handleEditAnnotation = (annotation: any) => {
+    setSelectedAnnotation(annotation);
+    setModalVisible(true);
+  }
+
 
   // Deletes an annotation
   const handleDeleteAnnotation = (id: number) => {
@@ -57,7 +91,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const handleVideoSelect = (videoPath: string) => {
     setAnnotations((prev) =>
       prev.map((ann) =>
-        ann.id === selectedAnnotation.id ? { ...ann, video: videoPath } : ann
+        ann.id === selectedAnnotation?.id ? { ...ann, video: videoPath } : ann
       )
     );
   };
@@ -74,7 +108,10 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       <Text style={styles.header}>Annotations</Text>
       
       {/* Create Annotation Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity style={styles.addButton} onPress={() => {
+        setSelectedAnnotation({});
+        setModalVisible(true);
+      }}>
         <Text style={styles.addButtonText}>+ Add Annotation</Text>
       </TouchableOpacity>
 
@@ -83,6 +120,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         annotations={annotations}
         syncEntries={syncEntries}
         onAttachVideo={handleAttachVideo}
+        onEditButton={handleEditAnnotation}
         onDeleteAnnotation={handleDeleteAnnotation}
       />
 
@@ -91,6 +129,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onCreateAnnotation={handleCreateAnnotation}
+        initialValues={selectedAnnotation}
       />
 
       {/* Sync Results Display */}
@@ -103,9 +142,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       {/* Sync Button */}
       <TouchableOpacity
         style={styles.syncButton}
-        onPress={() =>
-          handleSync(annotations, setSyncResult)
-        }
+        onPress={() => handleSync(annotations, setSyncResult)}
       >
         <Text style={styles.syncButtonText}>Sync</Text>
       </TouchableOpacity>

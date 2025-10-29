@@ -1,10 +1,10 @@
 // AnnotationList.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Video from 'react-native-video';
 
-const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnotation }) => {
+const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton, onDeleteAnnotation }) => {
   const [expandedAnnotation, setExpandedAnnotation] = React.useState<any>(null);
 
   const handleToggleDropdown = (annotation: any) => {
@@ -16,7 +16,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnot
   };
 
   return (
-    <>
+    <ScrollView>
       {annotations.map((annotation) => {
         const syncEntry = findSyncEntryForAnnotation(annotation.video);
 
@@ -28,19 +28,23 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnot
             >
               <Text style={styles.annotationTitle}>{annotation.name}</Text>
               <Ionicons
-                name={syncEntry ? 'checkmark-circle' : 'ellipse-outline'}
+                name={syncEntry?.inferenceResponse ? 'checkmark-circle' : 'ellipse-outline'}
                 size={20}
-                color={syncEntry ? 'green' : 'red'}
+                color={syncEntry?.inferenceResponse ? 'green' : 'red'}
               />
             </TouchableOpacity>
 
             {expandedAnnotation?.id === annotation.id && (
               <View style={styles.dropdown}>
                 <Text style={styles.videoText}>Info: {annotation.info}</Text>
+                <Text style={styles.videoText}>Location: {annotation.location.latitude}, {annotation.location.longitude}</Text>
+                <Text style={styles.videoText}>Length: {annotation.length}</Text>
+                <Text style={styles.videoText}>Leaf Number: {annotation.leafNumber}</Text>
+                <Text style={styles.videoText}>Leaf Widths: {annotation.leafWidths?.join(', ')}</Text>
              
                 {annotation.video ? (
                   <View style={styles.videoContainer}>
-                    <Text style={styles.videoText}>Attached Video: {annotation.video}</Text>
+                    <Text style={styles.videoText}>Attached Video:</Text>
                     <Video
                       source={{ uri: annotation.video }} // Display the attached video
                       style={styles.videoPlayer}
@@ -66,6 +70,14 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnot
                 </TouchableOpacity>
                 
                 <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() =>  onEditButton(annotation)}
+                >
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
+
+
+                <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => onDeleteAnnotation(annotation.id)}
                 >
@@ -76,7 +88,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onDeleteAnnot
           </View>
         );
       })}
-    </>
+    </ScrollView>
   );
 };
 
@@ -120,6 +132,18 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   attachButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+  },
+
+  // Edit Annotation Button
+  editButton: {
+    backgroundColor: '#4CAF50',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  editButtonText: {
     color: '#fff',
     textAlign: 'center',
   },

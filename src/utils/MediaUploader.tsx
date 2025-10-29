@@ -1,15 +1,24 @@
 // MediaUploader.tsx
-export const sendMedia = async (type: 'image' | 'video', mediaList: string[], endpoint: string) => {
+interface MediaUploadItem {
+  path: String;
+  params?: object;
+}
+
+export const sendMedia = async (type: 'image' | 'video', mediaItems: MediaUploadItem[], endpoint: string) => {
   const responses = []; // Array to store responses
 
-  for (const mediaPath of mediaList) {
-    const fileName = mediaPath.split('/').pop(); // Extract file name
+  for (const item of mediaItems) {
+    const { path, params ={} } = item;
+    const fileName = path.split('/').pop(); // Extract file name
     const formData = new FormData();
+   
     formData.append(type, {
-      uri: `file://${mediaPath}`,
+      uri: `file://${path}`,
       name: fileName,
       type: type === 'image' ? 'image/jpeg' : 'video/mp4',
     });
+
+    formData.append('params', JSON.stringify(params));
 
     try {
       const response = await fetch(endpoint, {
@@ -21,13 +30,13 @@ export const sendMedia = async (type: 'image' | 'video', mediaList: string[], en
       const result = await response.json();
       console.log(`${type} upload response:`, result);
 
-      responses.push({ mediaPath, success: true, data: result });
+      responses.push({ path, success: true, data: result });
     } catch (error) {
       console.error(`Error uploading ${type}:`, error);
-      responses.push({ mediaPath, success: false, error });
+      responses.push({ path, success: false, error });
     }
   }
 
-  return responses; // Return collected responses
+  return responses;
 };
 

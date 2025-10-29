@@ -1,5 +1,6 @@
 // AnnotationsActions.tsx
 import { useSync } from '../../Sync/context/SyncContext';
+import { isLeafDetailsValid } from '../utils/AnnotationValidation';
 
 const useHandleSync = () => {
   const { syncAllPending } = useSync();
@@ -9,13 +10,24 @@ const useHandleSync = () => {
     setSyncResult: (message: string) => void
   ) => {
 
-    console.log('Inside handleSendAnnotationsVideos'); // Debug log
+    //console.log('Inside handleSendAnnotationsVideos'); // Debug log
   
-    const videosToSend: string[] = annotations
-      .map((annotation) => annotation.video)
-      .filter((video) => video !== null && video !== undefined);
-  
-    if (videosToSend.length === 0) {
+    const entriesToSend = annotations
+      .filter((annotation) => {
+        const validVideo = annotation.video;
+        const validLeaf = isLeafDetailsValid(annotation.length, annotation.leafNumber, annotation.leafWidths);
+        return validVideo && validLeaf
+      })
+      .map((annotation) => ({
+        path: annotation.video,
+        params: {
+          length: annotation.length,
+          leafNumber: annotation.leafNumber,
+          leafWidths: annotation.leafWidths
+        }
+      }));
+    
+    if (entriesToSend.length === 0) {
       setSyncResult("No videos attached to annotations.");
       setTimeout(() => setSyncResult(null), 3000);
       return;
@@ -23,7 +35,7 @@ const useHandleSync = () => {
    
     // Run sync process
     try {
-      await syncAllPending(videosToSend, setSyncResult);
+      await syncAllPending(entriesToSend, setSyncResult);
     } catch (error) {
       console.error('Sync error:', error);
       setSyncResult("Sync Failed: " + error.message);

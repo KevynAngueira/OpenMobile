@@ -45,8 +45,45 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     (video) => !annotations.some((annotation) => annotation.video === video)
   );      
 
+
+  // Validates video location matches annotation location
+  const validateLocation = (videoName: string) => {
+    if (selectedAnnotation.location.latitude === 100 && selectedAnnotation.location.longitude === 100) {
+      if (!(videoName === "corn1" || videoName === "notcorn1")) {
+        console.log("Skipping video selection due to location constraint 1.");
+        return false;
+      }
+    }
+    
+    else if (selectedAnnotation.location.latitude === 200 && selectedAnnotation.location.longitude === 200) {
+      if (!(videoName === "corn2" || videoName === "notcorn2")) {
+        console.log("Skipping video selection due to location constraint 2.");
+        return false;
+      }
+    }
+    
+    else if (!(selectedAnnotation.location.latitude === 500 && selectedAnnotation.location.longitude === 500)) {
+      console.log("Skipping video selection due to location constraint 3.");
+      return false;
+    }
+    
+    else if (videoName === "corn1" || videoName === "notcorn1" || videoName === "corn2" || videoName === "notcorn2") {
+      	console.log("Skipping video selection due to location constraint 4.");
+      	return false;
+    }
+    return true;
+  }
+
   // Handles callback to Annotations screen
-  const handleVideoSelect = (videoPath: string) => {
+  const handleVideoSelect = (videoPath: string) => { 
+  
+    const videoName = videoPath.split('/').pop()?.split('.')[0]; // Extracts the name without path or extension
+
+    // TODO: Finish location validation service
+    //if (!validateLocation(videoName)){
+    //  return;
+    //}
+
     const annotationUsingVideo = annotations.find((annotation) => annotation.video === videoPath);
 
     if (annotationUsingVideo) {
@@ -174,14 +211,37 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
   // Renders video item
   const renderItem = ({ item }: { item: string }) => {
     const annotationUsingVideo = annotations.find((annotation) => annotation.video === item);
+    const videoName = item.split('/').pop()?.split('.')[0]; // Extracts the name without path or extension
+    let sameLocation = false;
+
+    if (selectedAnnotation?.location?.latitude === 100 && selectedAnnotation?.location?.longitude === 100) {
+      if (videoName === "corn1" || videoName === "notcorn1") {
+        sameLocation = true;
+      }
+    } else if (selectedAnnotation?.location?.latitude === 200 && selectedAnnotation?.location?.longitude === 200) {
+      if (videoName === "corn2" || videoName === "notcorn2") {
+        sameLocation = true;
+      }
+    } else if (selectedAnnotation?.location?.latitude === 500 && selectedAnnotation?.location?.longitude === 500) {
+      if (!(videoName === "corn1" || videoName === "notcorn1" || videoName === "corn2" || videoName === "notcorn2")) {
+        sameLocation = true;
+      }
+    }
   
     return (
       <View style={styles.videoItem}>
         <Video source={{ uri: item }} style={styles.videoPreview} paused={true} controls />
+	
 
+      {/* Location Tag */}
+      {sameLocation && (
+        <View style={styles.locationTag}>
+          <Text style={styles.tagButtonText}>Attachable</Text>
+        </View>
+      )}
 
-	{/* Tag or Delete Button */}
-        {annotationUsingVideo ? (
+      {/* Tag or Delete Button */}  
+      {annotationUsingVideo ? (
           <TouchableOpacity
             onPress={() => handleDeselectVideo(item)}
             style={styles.tagButton}
@@ -384,7 +444,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
-
+  
+  // Location Tag styles
+  locationTag: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#4CAF50',
+    padding: 5,
+    borderRadius: 5,
+  },
+  locationTagText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
 
   // Select Button styles
   selectButton: {
