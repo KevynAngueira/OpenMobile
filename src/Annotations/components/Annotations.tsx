@@ -1,7 +1,6 @@
 // Annotations.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
 
 import AnnotationList from './AnnotationList';
@@ -10,6 +9,11 @@ import { useAnnotations } from '../context/AnnotationsContext';
 import { useSync } from '../../Sync/context/SyncContext';
 import useHandleSync from '../services/AnnotationActions';
 import { FLASK_URL, HUB_BASE_URL } from '../../constants/Config';
+
+import { useServerConfig } from '../../hooks/useServerConfig';
+import { TextInput } from 'react-native-gesture-handler';
+import { Button } from 'react-native';
+
 
 interface AnnotationsProps {
   route: RouteProp<any, any>; 
@@ -23,6 +27,11 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
   const { removeSyncEntry } = useSync();
+
+
+  const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
+  const [showServerSettings, setShowServerSettings] = useState(false);
+
   navigation = useNavigation();
 
   // Creates an annotation
@@ -107,6 +116,43 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     <View style={styles.container}>
       <Text style={styles.header}>Annotations</Text>
       
+      {/* Server IP Input */}
+      <View>
+        <Button
+          title={showServerSettings ? 'Hide Server Settings' : 'Enter Server Settings'}
+          onPress={() => setShowServerSettings(!showServerSettings)}
+          color='#4CAF50'
+        />
+      </View>
+
+      { showServerSettings && (
+        <View style={{ marginTop: 10, padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 8 }}>
+          <Text style={{ fontWeight: "bold", marginBottom: 5 }}>Server Settings</Text>
+
+          <TextInput
+            style={{ borderWidth: 1, padding: 8, marginBottom: 5, borderRadius: 6 }}
+            placeholder="IP (e.g. 192.168.1.148)"
+            value={ip}
+            onChangeText={setIP}
+          />
+
+          <TextInput
+            style={{ borderWidth: 1, padding: 8, marginBottom: 5, borderRadius: 6 }}
+            placeholder="Port (e.g. 5000)"
+            value={port}
+            onChangeText={setPort}
+            keyboardType="numeric"
+          />
+
+          <TouchableOpacity
+            style={{ backgroundColor: "#4CAF50", padding: 10, borderRadius: 6 }}
+            onPress={() => saveServerSettings(ip, port)}
+          >
+            <Text style={{ color: "white", textAlign: "center" }}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Create Annotation Button */}
       <TouchableOpacity style={styles.addButton} onPress={() => {
         setSelectedAnnotation({});
@@ -142,7 +188,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       {/* Sync Button */}
       <TouchableOpacity
         style={styles.syncButton}
-        onPress={() => handleSync(annotations, setSyncResult)}
+        onPress={() => handleSync(serverURL, annotations, setSyncResult)}
       >
         <Text style={styles.syncButtonText}>Sync</Text>
       </TouchableOpacity>

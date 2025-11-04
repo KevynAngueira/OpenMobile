@@ -3,16 +3,13 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { sendMedia } from '../../utils/MediaUploader';
-//import { HUB_BASE_URL } from '../../constants/Config';
-import { FLASK_URL } from '../../constants/Config';
-
+// import { FLASK_URL } from '../../constants/Config';
 
 interface SyncEntry {
   id: string;
   videoPath: string;
   params?: Record<string, any>;
   videoStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
-  paramStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
   inferenceStatus: 'pending' | 'running' | 'completed' | 'failed';
   uploadResponse?: any;
   inferenceResponse?: any;
@@ -92,11 +89,16 @@ export const SyncProvider: React.FC = ({ children }) => {
     setSyncEntries((prev) => prev.filter((entry) => entry.id !== id));
   };
   
-  const syncUploads = async (entries: SyncEntry[], setSyncResult: (message: string) => void) => {
+  const syncUploads = async (
+    serverURL: string, 
+    entries: SyncEntry[], 
+    setSyncResult: (message: string) => void
+  ) => {
     let updatedEntries = [...entries];
 
     for (const entry of updatedEntries) {
       console.log('Checking upload status for: ', entry.id);
+      
       if (entry.videoStatus === 'uploaded') {
         console.log('Skipping Upload: ', entry.id);
         setSyncResult(`Upload Response: skipping ${entry.id}`);
@@ -104,9 +106,8 @@ export const SyncProvider: React.FC = ({ children }) => {
       }
 
       try {
-        if ((entry.videoStatus !== 'uploading') || (entry.paramStatus !== 'uploading')) {
+        if (entry.videoStatus !== 'uploading') {
           entry.videoStatus = 'uploading';
-          entry.paramStatus = 'uploading';
 
           const uploadResponse = await sendMedia(
             'video',
@@ -114,11 +115,10 @@ export const SyncProvider: React.FC = ({ children }) => {
               path: entry.videoPath,
               params: entry.params
             }],
-            `${FLASK_URL}/video/send`
+            `${serverURL}/video/send`
           );          
 
           entry.videoStatus = 'uploaded';
-          entry.paramStatus = 'uploaded';
           
           entry.uploadResponse = uploadResponse[0].data;
           console.log('Upload Response: ', entry.uploadResponse);
@@ -135,11 +135,16 @@ export const SyncProvider: React.FC = ({ children }) => {
     return updatedEntries;
   };
   
-  const syncInference = async (entries: SyncEntry[], setSyncResult: (message: string) => void) => {
+  const syncInference = async (
+    serverURL: string,
+    entries: SyncEntry[], 
+    setSyncResult: (message: string) => void
+  ) => {
     let updatedEntries = [...entries];
 
     for (const entry of updatedEntries) {
       console.log('Checking completed status for: ', entry.id);
+      
       if (entry.inferenceStatus === 'completed' || entry.videoStatus !== 'uploaded') {
         console.log('Skipping Inference: ', entry.id);
         setSyncResult(`Inference Response: skipping ${entry.id}`);
@@ -150,7 +155,7 @@ export const SyncProvider: React.FC = ({ children }) => {
         if (entry.inferenceStatus !== 'completed') {
           entry.inferenceStatus = 'running';
           const fileNameWithoutExtension = entry.id.replace(/\.[^/.]+$/, '');
-          const inferenceResponse = await fetch(`${FLASK_URL}/inference/${fileNameWithoutExtension}`);
+          const inferenceResponse = await fetch(`${serverURL}/inference/${fileNameWithoutExtension}`);
           const inferenceJson = await inferenceResponse.json();
           entry.inferenceStatus = 'completed';
           entry.inferenceResponse = inferenceJson;
@@ -169,6 +174,7 @@ export const SyncProvider: React.FC = ({ children }) => {
   };
   
   const syncAllPending = async (
+    serverURL: string,
     mediaItems: {path: string; params?: Record<string, any>}[], 
     setSyncResult: (message: string) => void
   ) => {
@@ -202,7 +208,7 @@ export const SyncProvider: React.FC = ({ children }) => {
             {
               ...entry,
               params: item.params,
-              paramStatus: 'new',
+              videoStatus: 'new',
               inferenceStatus: 'pending',
             } : entry
         );
@@ -214,7 +220,7 @@ export const SyncProvider: React.FC = ({ children }) => {
     
     // Step 3: Upload videos
     console.log('== Start Video Upload ==');
-    updatedEntries = await syncUploads(updatedEntries, setSyncResult);
+    updatedEntries = await syncUploads(serverURL, updatedEntries, setSyncResult);
     setSyncEntries(updatedEntries);
     console.log('== End Video Upload ==');
     
@@ -222,7 +228,7 @@ export const SyncProvider: React.FC = ({ children }) => {
     
     // Step 4: Run inference
     console.log('== Start Video Inference ==');
-    updatedEntries = await syncInference(updatedEntries, setSyncResult);
+    updatedEntries = await syncInference(serverURL, updatedEntries, setSyncResult);
     console.log('== End Video Inference ==');
     
     setTimeout(() => setSyncResult("Inference Successful! Sync Complete"), 3000);

@@ -1,4 +1,5 @@
 // AnnotationsActions.tsx
+import { server } from '../../../metro.config';
 import { useSync } from '../../Sync/context/SyncContext';
 import { isLeafDetailsValid } from '../utils/AnnotationValidation';
 
@@ -6,12 +7,17 @@ const useHandleSync = () => {
   const { syncAllPending } = useSync();
   
   const handleSync = async (
+    serverURL: string,
     annotations: any[],
     setSyncResult: (message: string) => void
   ) => {
 
     //console.log('Inside handleSendAnnotationsVideos'); // Debug log
-  
+    if (!serverURL) {
+      setSyncResult("⚠️ Configure server IP & port first");
+      return;
+    }
+
     const entriesToSend = annotations
       .filter((annotation) => {
         const validVideo = annotation.video;
@@ -35,7 +41,7 @@ const useHandleSync = () => {
    
     // Run sync process
     try {
-      await syncAllPending(entriesToSend, setSyncResult);
+      await syncAllPending(serverURL, entriesToSend, setSyncResult);
     } catch (error) {
       console.error('Sync error:', error);
       setSyncResult("Sync Failed: " + error.message);
