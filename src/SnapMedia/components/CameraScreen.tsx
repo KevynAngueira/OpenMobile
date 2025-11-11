@@ -99,9 +99,9 @@ const CameraScreen = ({ navigation }) => {
   const handleSelectVideo = async () => {
     // Pass the video URI to VideoGallery for selection
     if (videoUri) {
-      await saveVideo(videoUri);
-      console.log('Video selected from Camera:', videoUri)
-      navigation.navigate('VideoGallery', { selectedVideo: videoUri }); 
+      const savedPath = await saveVideo(videoUri);
+      console.log('Video selected from Camera:', savedPath)
+      navigation.navigate('VideoGallery', { selectedVideo: savedPath }); 
     }
     setModalVisible(false);  // Close the modal after selection
   };
@@ -109,8 +109,8 @@ const CameraScreen = ({ navigation }) => {
   const handleSaveVideo = async () => {
     // Save the video for later and continue recording
     if (videoUri) {
-      await saveVideo(videoUri);
-      console.log('Video saved for later:', videoUri);
+      const savedPath = await saveVideo(videoUri);
+      console.log('Video saved for later:', savedPath);
     }
     setModalVisible(false);  // Close the modal after saving
   };

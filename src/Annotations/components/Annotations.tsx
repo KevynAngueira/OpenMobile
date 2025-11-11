@@ -59,7 +59,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       },
       length: parseFloat(length),
       leafNumber: parseInt(leafNumber),
-      leafWidths: parsedLeafWidths
+      leafWidths: parsedLeafWidths,
     };
 
     setAnnotations((prev) => {

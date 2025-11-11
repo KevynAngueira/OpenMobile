@@ -1,7 +1,7 @@
 // AnnotationList.tsx
 import React from 'react';
 import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from '@react-native-vector-icons/material-icons';
 import Video from 'react-native-video';
 
 const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton, onDeleteAnnotation }) => {
@@ -27,11 +27,18 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
               style={styles.annotationHeader}
             >
               <Text style={styles.annotationTitle}>{annotation.name}</Text>
-              <Ionicons
-                name={syncEntry?.inferenceResponse ? 'checkmark-circle' : 'ellipse-outline'}
-                size={20}
-                color={syncEntry?.inferenceResponse ? 'green' : 'red'}
-              />
+              
+              {syncEntry?.videoInferenceResponse?.value?.details?.defoliation != null ? (
+                <Text style={{ fontSize: 16, color: 'green' }}>
+                  {Math.round(syncEntry.videoInferenceResponse.value.details.defoliation)}%
+                </Text>
+              ) : (
+                <Ionicons
+                  name="close"
+                  size={20}
+                  color="red"
+                />
+              )}
             </TouchableOpacity>
 
             {expandedAnnotation?.id === annotation.id && (
@@ -46,11 +53,11 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
                   <View style={styles.videoContainer}>
                     <Text style={styles.videoText}>Attached Video:</Text>
                     <Video
-                      source={{ uri: annotation.video }} // Display the attached video
+                      source={{ uri: annotation.video }} 
                       style={styles.videoPlayer}
-                      controls={true} // Show controls (play, pause, volume)
+                      controls={true}
                       resizeMode="contain"
-                      paused={false} // Auto-play
+                      paused={false}
                     />
                   </View>
                 ) : null}
@@ -58,7 +65,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
                 {/* Display the inference results */}
                 {syncEntry && (
                   <View style={styles.resultsContainer}>
-                    <Text style={styles.resultsText}>Inference Result: {JSON.stringify(syncEntry.inferenceResponse)}</Text>
+                    <Text style={styles.resultsText}>Inference Result: {JSON.stringify(syncEntry.videoInferenceResponse)}</Text>
                   </View>
                 )}
 

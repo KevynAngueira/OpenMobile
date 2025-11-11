@@ -32,12 +32,6 @@ const useHandleSync = () => {
           leafWidths: annotation.leafWidths
         }
       }));
-    
-    if (entriesToSend.length === 0) {
-      setSyncResult("No videos attached to annotations.");
-      setTimeout(() => setSyncResult(null), 3000);
-      return;
-    }
    
     // Run sync process
     try {
