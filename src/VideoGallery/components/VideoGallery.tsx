@@ -4,7 +4,7 @@ import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList, Alert } from
 import Video from 'react-native-video';
 import RNFS from 'react-native-fs';
 import { RouteProp } from '@react-navigation/native';
-import { useAnnotations } from '../../Annotations/context/AnnotationsContext';
+import { useLeafAnnotations } from '../../Annotations/context/LeafAnnotationsContext';
 
 interface VideoGalleryProps {
   route: RouteProp<any, any>; 
@@ -12,7 +12,7 @@ interface VideoGalleryProps {
 }
 
 const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
-  const { annotations, setAnnotations, selectedAnnotation, setSelectedAnnotation } = useAnnotations();	
+  const { leafAnnotations, setLeafAnnotations, selectedLeafAnnotation, setSelectedLeafAnnotation } = useLeafAnnotations();	
   const [videos, setVideos] = useState<string[]>([]);  
   const [attachedDropdownOpen, setAttachedDropdownOpen] = useState(false);
   const [unattachedDropdownOpen, setUnattachedDropdownOpen] = useState(true);
@@ -38,31 +38,31 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
   
   // Split videos into attached and unattached
   const attachedVideos = videos.filter((video) =>
-    annotations.some((annotation) => annotation.video === video)
+    leafAnnotations.some((leafAnnotation) => leafAnnotation.video === video)
   );
   
   const unattachedVideos = videos.filter(
-    (video) => !annotations.some((annotation) => annotation.video === video)
+    (video) => !leafAnnotations.some((leafAnnotation) => leafAnnotation.video === video)
   );      
 
 
   // Validates video location matches annotation location
   const validateLocation = (videoName: string) => {
-    if (selectedAnnotation.location.latitude === 100 && selectedAnnotation.location.longitude === 100) {
+    if (selectedLeafAnnotation.location.latitude === 100 && selectedLeafAnnotation.location.longitude === 100) {
       if (!(videoName === "corn1" || videoName === "notcorn1")) {
         console.log("Skipping video selection due to location constraint 1.");
         return false;
       }
     }
     
-    else if (selectedAnnotation.location.latitude === 200 && selectedAnnotation.location.longitude === 200) {
+    else if (selectedLeafAnnotation.location.latitude === 200 && selectedLeafAnnotation.location.longitude === 200) {
       if (!(videoName === "corn2" || videoName === "notcorn2")) {
         console.log("Skipping video selection due to location constraint 2.");
         return false;
       }
     }
     
-    else if (!(selectedAnnotation.location.latitude === 500 && selectedAnnotation.location.longitude === 500)) {
+    else if (!(selectedLeafAnnotation.location.latitude === 500 && selectedLeafAnnotation.location.longitude === 500)) {
       console.log("Skipping video selection due to location constraint 3.");
       return false;
     }
@@ -84,12 +84,12 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     //  return;
     //}
 
-    const annotationUsingVideo = annotations.find((annotation) => annotation.video === videoPath);
+    const annotationUsingVideo = leafAnnotations.find((leafAnnotation) => leafAnnotation.video === videoPath);
 
     if (annotationUsingVideo) {
       Alert.alert(
         'Video Already Attached',
-        `This video is already attached to "${annotationUsingVideo.name}". Do you want to remove it and attach it to "${selectedAnnotation.name}"?`,
+        `This video is already attached to "${annotationUsingVideo.name}". Do you want to remove it and attach it to "${selectedLeafAnnotation.name}"?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -97,10 +97,10 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
             style: 'destructive',
             onPress: () => {
               // Remove the video from the old annotation
-              const updatedAnnotations = annotations.map((annotation) =>
-                annotation.video === videoPath ? { ...annotation, video: null } : annotation
+              const updatedAnnotations = leafAnnotations.map((leafAnnotation) =>
+                leafAnnotation.video === videoPath ? { ...leafAnnotation, video: null } : leafAnnotation
               );
-              setAnnotations(updatedAnnotations);
+              setLeafAnnotations(updatedAnnotations);
 
               // Navigate back with the selected video
               console.log('Video selected:', videoPath);
@@ -175,7 +175,7 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
   
   // Handle deselecting a video from its annotation
   const handleDeselectVideo = (videoPath: string) => {
-    const annotationUsingVideo = annotations.find((annotation) => annotation.video === videoPath);
+    const annotationUsingVideo = leafAnnotations.find((leafAnnotation) => leafAnnotation.video === videoPath);
 
     if (annotationUsingVideo) {
       Alert.alert(
@@ -187,10 +187,10 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
             text: 'Deselect',
             style: 'destructive',
             onPress: () => {
-              const updatedAnnotations = annotations.map((annotation) =>
-                annotation.video === videoPath ? { ...annotation, video: null } : annotation
+              const updatedAnnotations = leafAnnotations.map((leafAnnotation) =>
+                leafAnnotation.video === videoPath ? { ...leafAnnotation, video: null } : leafAnnotation
               );
-              setAnnotations(updatedAnnotations);
+              setLeafAnnotations(updatedAnnotations);
             },
           },
         ]
@@ -210,19 +210,19 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
 
   // Renders video item
   const renderItem = ({ item }: { item: string }) => {
-    const annotationUsingVideo = annotations.find((annotation) => annotation.video === item);
+    const annotationUsingVideo = leafAnnotations.find((leafAnnotation) => leafAnnotation.video === item);
     const videoName = item.split('/').pop()?.split('.')[0]; // Extracts the name without path or extension
     let sameLocation = false;
 
-    if (selectedAnnotation?.location?.latitude === 100 && selectedAnnotation?.location?.longitude === 100) {
+    if (selectedLeafAnnotation?.location?.latitude === 100 && selectedLeafAnnotation?.location?.longitude === 100) {
       if (videoName === "corn1" || videoName === "notcorn1") {
         sameLocation = true;
       }
-    } else if (selectedAnnotation?.location?.latitude === 200 && selectedAnnotation?.location?.longitude === 200) {
+    } else if (selectedLeafAnnotation?.location?.latitude === 200 && selectedLeafAnnotation?.location?.longitude === 200) {
       if (videoName === "corn2" || videoName === "notcorn2") {
         sameLocation = true;
       }
-    } else if (selectedAnnotation?.location?.latitude === 500 && selectedAnnotation?.location?.longitude === 500) {
+    } else if (selectedLeafAnnotation?.location?.latitude === 500 && selectedLeafAnnotation?.location?.longitude === 500) {
       if (!(videoName === "corn1" || videoName === "notcorn1" || videoName === "corn2" || videoName === "notcorn2")) {
         sameLocation = true;
       }

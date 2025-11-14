@@ -1,18 +1,18 @@
 // Annotations.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Alert, View, Button, StyleSheet, Text, TouchableOpacity} from 'react-native';
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
 
 import AnnotationList from './AnnotationList';
 import AnnotationModal from './AnnotationModal';
-import { useAnnotations } from '../context/AnnotationsContext';
+import { useLeafAnnotations } from '../context/LeafAnnotationsContext';
 import { useSync } from '../../Sync/context/SyncContext';
 import useHandleSync from '../services/AnnotationActions';
 import { FLASK_URL, HUB_BASE_URL } from '../../constants/Config';
 
 import { useServerConfig } from '../../hooks/useServerConfig';
 import { TextInput } from 'react-native-gesture-handler';
-import { Button } from 'react-native';
+
 
 
 interface AnnotationsProps {
@@ -21,12 +21,12 @@ interface AnnotationsProps {
 }
 
 const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
-  const { annotations, setAnnotations, selectedAnnotation, setSelectedAnnotation } = useAnnotations();
+  const { leafAnnotations, setLeafAnnotations, selectedLeafAnnotation, setSelectedLeafAnnotation } = useLeafAnnotations();
   const { syncEntries } = useSync();
   const [modalVisible, setModalVisible] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
-  const { removeSyncEntry } = useSync();
+  const { removeAllSyncEntry } = useSync();
 
 
   const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
@@ -62,7 +62,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       leafWidths: parsedLeafWidths,
     };
 
-    setAnnotations((prev) => {
+    setLeafAnnotations((prev) => {
       if (id) {
         return prev.map((ann) => (ann.id === id ? newAnnotation : ann));
       }
@@ -74,7 +74,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
   // Edits an annotation
   const handleEditAnnotation = (annotation: any) => {
-    setSelectedAnnotation(annotation);
+    setSelectedLeafAnnotation(annotation);
     setModalVisible(true);
   }
 
@@ -85,22 +85,22 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
-        onPress: () => setAnnotations((prev) => prev.filter((annotation) => annotation.id !== id)),
+        onPress: () => setLeafAnnotations((prev) => prev.filter((annotation) => annotation.id !== id)),
       },
     ]);
   };
 
   // Prompts you to attach a video from the VideoGallery screen
   const handleAttachVideo = (annotation: any) => {
-    setSelectedAnnotation(annotation);
+    setSelectedLeafAnnotation(annotation);
     navigation.navigate('VideoGallery')
   };
   
   // Upon video selection, attaches the video to the annotation
   const handleVideoSelect = (videoPath: string) => {
-    setAnnotations((prev) =>
+    setLeafAnnotations((prev) =>
       prev.map((ann) =>
-        ann.id === selectedAnnotation?.id ? { ...ann, video: videoPath } : ann
+        ann.id === selectedLeafAnnotation?.id ? { ...ann, video: videoPath } : ann
       )
     );
   };
@@ -115,6 +115,55 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Annotations</Text>
+
+      {/* Reset Buttons */}
+      <View style={{ flexDirection: 'row' }}>
+        {/* Reset Entries */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
+          onPress={() => {
+            Alert.alert(
+              "Confirm Reset",
+              "Are you sure you want to delete all entries?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Yes", style: "destructive", onPress: () => removeAllSyncEntry() }
+              ]
+            );
+          }}
+        >
+          <Text style={{ color: 'white' }}>Reset Entries</Text>
+        </TouchableOpacity>
+
+        {/* Reset Server */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#FF9800', padding: 8, borderRadius: 6 }}
+          onPress={() => {
+            Alert.alert(
+              "Confirm Server Reset",
+              "Are you sure you want to reset the server cache?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { 
+                  text: "Yes", 
+                  style: "destructive", 
+                  onPress: async () => {
+                    try {
+                      const response = await fetch(`${serverURL}/reset`);
+                      const data = await response.json();
+                      Alert.alert("Server Reset", data.message || "Server cache reset.");
+                    } catch (err) {
+                      Alert.alert("Error", `Failed to reset server: ${err.message}`);
+                    }
+                  } 
+                }
+              ]
+            );
+          }}
+        >
+          <Text style={{ color: 'white' }}>Reset Server</Text>
+        </TouchableOpacity>
+      </View>
       
       {/* Server IP Input */}
       <View>
@@ -155,7 +204,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
       {/* Create Annotation Button */}
       <TouchableOpacity style={styles.addButton} onPress={() => {
-        setSelectedAnnotation({});
+        setSelectedLeafAnnotation({});
         setModalVisible(true);
       }}>
         <Text style={styles.addButtonText}>+ Add Annotation</Text>
@@ -163,7 +212,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
       {/* Annotations List */}
       <AnnotationList
-        annotations={annotations}
+        annotations={leafAnnotations}
         syncEntries={syncEntries}
         onAttachVideo={handleAttachVideo}
         onEditButton={handleEditAnnotation}
@@ -175,7 +224,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onCreateAnnotation={handleCreateAnnotation}
-        initialValues={selectedAnnotation}
+        initialValues={selectedLeafAnnotation}
       />
 
       {/* Sync Results Display */}
@@ -188,7 +237,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       {/* Sync Button */}
       <TouchableOpacity
         style={styles.syncButton}
-        onPress={() => handleSync(serverURL, annotations, setSyncResult)}
+        onPress={() => handleSync(serverURL, leafAnnotations, setSyncResult)}
       >
         <Text style={styles.syncButtonText}>Sync</Text>
       </TouchableOpacity>

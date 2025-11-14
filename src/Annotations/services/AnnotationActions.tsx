@@ -8,7 +8,7 @@ const useHandleSync = () => {
   
   const handleSync = async (
     serverURL: string,
-    annotations: any[],
+    leafAnnotations: any[],
     setSyncResult: (message: string) => void
   ) => {
 
@@ -18,18 +18,18 @@ const useHandleSync = () => {
       return;
     }
 
-    const entriesToSend = annotations
-      .filter((annotation) => {
-        const validVideo = annotation.video;
-        const validLeaf = isLeafDetailsValid(annotation.length, annotation.leafNumber, annotation.leafWidths);
+    const entriesToSend = leafAnnotations
+      .filter((leafAnnotation) => {
+        const validVideo = leafAnnotation.video;
+        const validLeaf = isLeafDetailsValid(leafAnnotation.length, leafAnnotation.leafNumber, leafAnnotation.leafWidths);
         return validVideo && validLeaf
       })
-      .map((annotation) => ({
-        path: annotation.video,
+      .map((leafAnnotation) => ({
+        path: leafAnnotation.video,
         params: {
-          length: annotation.length,
-          leafNumber: annotation.leafNumber,
-          leafWidths: annotation.leafWidths
+          length: leafAnnotation.length,
+          leafNumber: leafAnnotation.leafNumber,
+          leafWidths: leafAnnotation.leafWidths
         }
       }));
    

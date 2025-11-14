@@ -19,7 +19,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
     <ScrollView>
       {annotations.map((annotation) => {
         const syncEntry = findSyncEntryForAnnotation(annotation.video);
-
+        
         return (
           <View key={annotation.id} style={styles.annotationContainer}>
             <TouchableOpacity
@@ -28,17 +28,48 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
             >
               <Text style={styles.annotationTitle}>{annotation.name}</Text>
               
-              {syncEntry?.videoInferenceResponse?.value?.details?.defoliation != null ? (
-                <Text style={{ fontSize: 16, color: 'green' }}>
-                  {Math.round(syncEntry.videoInferenceResponse.value.details.defoliation)}%
-                </Text>
-              ) : (
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color="red"
-                />
-              )}
+              <TouchableOpacity style={{ marginLeft: 10 }}>
+                {(() => {
+                  const status = syncEntry?.inferenceStatus;
+
+                  if (status === 'completed') {
+                    return (
+                      <Text style={{ fontSize: 16, color: 'green' }}>
+                        {Math.round(syncEntry?.inferenceResponse?.results?.defoliation ?? 0)}%
+                      </Text>
+                    );
+                  }
+
+                  if (status === 'running') {
+                    return (
+                      <Ionicons
+                        name="sync"
+                        size={20}
+                        color="dodgerblue"
+                      />
+                    );
+                  }
+
+                  if (status === 'waiting' || status === 'failed') {
+                    return (
+                      <Ionicons
+                        name="close"
+                        size={20}
+                        color="red"
+                      />
+                    );
+                  }
+
+                  // Default for undefined, new, pending, null, etc.
+                  return (
+                    <Ionicons
+                      name="circle"
+                      size={14}
+                      color="orange"
+                    />
+                  );
+                })()}
+              </TouchableOpacity>
             </TouchableOpacity>
 
             {expandedAnnotation?.id === annotation.id && (
@@ -65,7 +96,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
                 {/* Display the inference results */}
                 {syncEntry && (
                   <View style={styles.resultsContainer}>
-                    <Text style={styles.resultsText}>Inference Result: {JSON.stringify(syncEntry.videoInferenceResponse)}</Text>
+                    <Text style={styles.resultsText}>Inference Result: {JSON.stringify(syncEntry.inferenceResponse)}</Text>
                   </View>
                 )}
 

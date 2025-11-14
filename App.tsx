@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import { requestPermissions } from './src/utils/PermissionsHelper';
-import { AnnotationsProvider } from './src/Annotations/context/AnnotationsContext';
+import { LeafAnnotationsProvider } from './src/Annotations/context/LeafAnnotationsContext';
 import { SyncProvider } from './src/Sync/context/SyncContext';
 
 import Annotations from './src/Annotations/components/Annotations';
@@ -19,7 +19,7 @@ const App = () => {
   }, []);
 
   return (
-    <AnnotationsProvider>
+    <LeafAnnotationsProvider>
       <SyncProvider>
         <NavigationContainer>
           <Stack.Navigator initialRouteName="Annotations">
@@ -29,7 +29,7 @@ const App = () => {
           </Stack.Navigator>
         </NavigationContainer>
       </SyncProvider>
-    </AnnotationsProvider>
+    </LeafAnnotationsProvider>
   );
 };
 

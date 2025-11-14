@@ -1,4 +1,5 @@
 // SyncContext.tsx
+import _ from 'lodash';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -15,10 +16,8 @@ interface SyncEntry {
   videoUploadResponse?: any;
   paramUploadResponse?: any;
   
-  videoInferenceStatus: 'pending' | 'running' | 'completed' | 'failed';
-  paramInferenceStatus: 'pending' | 'running' | 'completed' | 'failed';  
-  videoInferenceResponse?: any;
-  paramInferenceResponse?: any;
+  inferenceStatus: 'new' | 'waiting' | 'running' | 'completed' | 'failed';  
+  inferenceResponse?: any;
 }
 
 interface SyncContextType {
@@ -26,7 +25,8 @@ interface SyncContextType {
   addSyncEntry: (videoPath: string) => Promise<void>;
   updateSyncEntry: (id: string, updates: Partial<SyncEntry>) => void;
   removeSyncEntry: (id: string) => Promise<void>;
-  syncAllPending: () => Promise<void>;
+  removeAllSyncEntry: () => Promise<void>;
+  syncAllPending: () => Promise<void>;Pending
 }
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
@@ -94,8 +94,8 @@ export const SyncProvider: React.FC = ({ children }) => {
       params,
       videoUploadStatus: 'new',
       paramUploadStatus: 'new',
-      videoInferenceStatus: 'pending',
-      paramInferenceStatus: 'pending',
+      videoInferenceStatus: 'new',
+      paramInferenceStatus: 'new',
     };
     return [...entries, newEntry];
   }
@@ -115,16 +115,16 @@ export const SyncProvider: React.FC = ({ children }) => {
         newEntry.id = updates.videoPath.split('/').pop() || entry.id;
         newEntry.videoUploadStatus = 'new';
         newEntry.videoUploadResponse = undefined;
-        newEntry.videoInferenceStatus = 'pending';
-        newEntry.videoInferenceResponse = undefined;
+        newEntry.inferenceStatus = 'new';
+        newEntry.inferenceResponse = undefined;
       }
   
       // If params changed
-      if (updates.params && updates.params !== entry.params) {
+      if (updates.params && !_.isEqual(updates.params, entry.params)) {
         newEntry.paramUploadStatus = 'new';
         newEntry.paramUploadResponse = undefined;
-        newEntry.paramInferenceStatus = 'pending';
-        newEntry.paramInferenceResponse = undefined;
+        newEntry.inferenceStatus = 'new';
+        newEntry.inferenceResponse = undefined;
       }
   
       return newEntry;
@@ -169,6 +169,11 @@ export const SyncProvider: React.FC = ({ children }) => {
   ) => {
     setSyncEntries((prev) => atomicRemoveEntry(prev, id));
   };
+
+  const removeAllSyncEntry = async () => {
+    setSyncEntries([]);
+  };
+
 
   //////////////////////////////////////////// 
   //            Upload Functions
@@ -265,10 +270,14 @@ export const SyncProvider: React.FC = ({ children }) => {
         setSyncEntries(updatedEntries);
       }
 
+
+      console.log(`------------- ${entry.paramUploadStatus}`)
       if (!paramsAttached) {
         uploadParams(serverURL, entry, setSyncResult);
         setSyncEntries(updatedEntries);
       }
+      console.log(`------------- ${entry.paramUploadResponse}`)
+      console.log(`------------- ${entry.paramUploadStatus}`)
     }
 
     return updatedEntries;
@@ -278,62 +287,56 @@ export const SyncProvider: React.FC = ({ children }) => {
   //            Inference Functions
   ////////////////////////////////////////////
 
-
-  const inferenceVideo = async (
+  const inference = async (
     serverURL: string, 
     entry: SyncEntry, 
     setSyncResult: (message: string) => void
   ) => {
-    console.log('Video Inference Start: ', entry.videoPath);
-    setSyncResult(`Video Inference Start: ${entry.videoPath}`);
-    entry.videoInferenceStatus = 'running';
-
+    console.log('Inference Start: ', entry.videoPath);
+    setSyncResult(`Inference Start: ${entry.videoPath}`);
+    entry.inferenceStatus = 'running';
+    
     try {
       const fileNameWithoutExtension = entry.id.replace(/\.[^/.]+$/, '');
-      const inferenceResponse = await fetch(`${serverURL}/inference/video/${fileNameWithoutExtension}`);
+      const inferenceResponse = await fetch(`${serverURL}/inference/${fileNameWithoutExtension}`);
       const inferenceJson = await inferenceResponse.json();     
 
-      entry.videoInferenceResponse = inferenceJson;
-      console.log('Video Inference Response: ', entry.videoInferenceResponse);
-      setSyncResult(`Video Inference Response: ${JSON.stringify(inferenceJson)}`);
+      entry.inferenceResponse = inferenceJson;
+      console.log('Inference Response: ', entry.inferenceResponse);
+      setSyncResult(`Inference Response: ${JSON.stringify(inferenceJson)}`);
 
-      if (entry.videoInferenceResponse?.status === "success") {
-        entry.videoInferenceStatus = 'completed';
-        console.log('Video Inference Successful!');
+      if (inferenceJson.status === 'waiting' && inferenceJson.reupload) {
+        const reupload = inferenceJson.reupload;
+        const videoStillUploading = entry.videoUploadStatus == 'uploading';
+
+        if (reupload.video && !videoStillUploading) {
+          entry.videoUploadStatus = 'failed';
+          entry.videoUploadResponse = undefined;
+        }
+        if (reupload.params) {
+          entry.paramUploadStatus = 'failed';
+          entry.paramUploadResponse = undefined;
+        }  
+
+        if (!videoStillUploading) {
+          entry.inferenceStatus = 'waiting';
+          setSyncResult(`⚠️ Waiting on dependencies. Marked failed uploads: ${JSON.stringify(reupload)}`);
+        }
       }
-    } catch (error) {
-      console.error('Sync error for video inference:', entry.videoPath, error);
-      setSyncResult(`Inference Failed: ${entry.id} => ${error.message}`);
-      entry.videoInferenceStatus = 'failed';
-    }
-  };
 
-  const inferenceParams = async (
-    serverURL: string, 
-    entry: SyncEntry, 
-    setSyncResult: (message: string) => void
-  ) => {
-    console.log('Param Inference Start: ', entry.videoPath);
-    setSyncResult(`Param Inference Start: ${entry.videoPath}`);
-    entry.paramInferenceStatus = 'running';
-
-    try {
-      const fileNameWithoutExtension = entry.id.replace(/\.[^/.]+$/, '');
-      const inferenceResponse = await fetch(`${serverURL}/inference/params/${fileNameWithoutExtension}`);
-      const inferenceJson = await inferenceResponse.json();     
-
-      entry.paramInferenceResponse = inferenceJson;
-      console.log('Param Inference Response: ', entry.paramInferenceResponse);
-      setSyncResult(`Param Inference Response: ${JSON.stringify(inferenceJson)}`);
-
-      if (entry.paramInferenceResponse?.status === "success") {
-        entry.paramInferenceStatus = 'completed';
-        console.log('Param Inference Successful!');
+      if (entry.inferenceResponse?.status === "error") {
+        entry.inferenceStatus = 'failed';
       }
+
+      if (entry.inferenceResponse?.status === "completed") {
+        entry.inferenceStatus = 'completed';
+        console.log('Inference Successful!');
+      }
+
     } catch (error) {
-      console.error('Sync error for param inference:', entry.videoPath, error);
+      console.error('Sync error for inference:', entry.videoPath, error);
       setSyncResult(`Inference Failed: ${entry.id} => ${error.message}`);
-      entry.paramInferenceStatus = 'failed';
+      entry.inferenceStatus = 'failed';
     }
   };
 
@@ -351,26 +354,10 @@ export const SyncProvider: React.FC = ({ children }) => {
       if (!videoAttached || !paramAttached) {
         console.log(`Warning: skipping ${entry.id}, video or params not uploaded`);
         setSyncResult(`Warning: skipping ${entry.id}, video or params not uploaded`);
-      }
-
-      const videoResults = entry.videoInferenceStatus === 'completed';
-      const paramResults = entry.paramInferenceStatus === 'completed';
-      
-      if (videoResults && paramResults) {
-        console.log('Skipping Inference: ', entry.id);
-        setSyncResult(`Inference Response: skipping ${entry.id}`);
-        continue;
-      }
+      }   
     
-      if (!videoResults) {
-        inferenceVideo(serverURL, entry, setSyncResult);
-        setSyncEntries(updatedEntries);
-      }
-
-      if (!paramResults) {
-        inferenceParams(serverURL, entry, setSyncResult);
-        setSyncEntries(updatedEntries);
-      }
+      inference(serverURL, entry, setSyncResult);
+      setSyncEntries(updatedEntries);
     }
       
     return updatedEntries;
@@ -389,11 +376,11 @@ export const SyncProvider: React.FC = ({ children }) => {
   
     setSyncResult('Pre-loading sync entries...');
     // Step 1: Remove deprecated entries
-    console.log('== Removing Deprecated Sync Entries ==');
+    console.log('Removing Deprecated Sync Entries...');
     updatedEntries = atomicRemoveDeprecatedEntries(updatedEntries, mediaItems);
 
     // Step 2: Create new entries
-    console.log('== Creating or Updating Sync Entries ==');
+    console.log('Creating or Updating Sync Entries...');
     for (const item of mediaItems) {
       const id = item.path.split('/').pop();
       const existingEntry = syncEntries.find((entry) => entry.id === id);
@@ -425,16 +412,16 @@ export const SyncProvider: React.FC = ({ children }) => {
     setSyncResult("Starting Upload...");
 
     // Step 3: Upload videos
-    console.log('== Start Video Upload ==');
+    console.log('== Start Entry Upload ==');
     updatedEntries = await syncUploads(serverURL, updatedEntries, setSyncResult);
-    console.log('== End Video Upload ==');
+    console.log('== End Entry Upload ==');
     
     setSyncResult("Upload Successful! Running Inference...");
     
     // Step 4: Run inference
-    console.log('== Start Video Inference ==');
+    console.log('== Start Entry Inference ==');
     updatedEntries = await syncInference(serverURL, updatedEntries, setSyncResult);
-    console.log('== End Video Inference ==');
+    console.log('== End Entry Inference ==');
     
     setTimeout(() => setSyncResult("Inference Successful! Sync Complete"), 3000);
     setTimeout(() => setSyncResult(null), 6000);
@@ -448,6 +435,7 @@ export const SyncProvider: React.FC = ({ children }) => {
         addSyncEntry,
         updateSyncEntry,
         removeSyncEntry,
+        removeAllSyncEntry,
         syncAllPending,
       }}
     >
