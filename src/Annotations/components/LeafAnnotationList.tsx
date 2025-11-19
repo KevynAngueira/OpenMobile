@@ -1,10 +1,19 @@
-// AnnotationList.tsx
+// LeafAnnotationList.tsx
 import React from 'react';
 import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@react-native-vector-icons/material-icons';
 import Video from 'react-native-video';
 
-const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton, onDeleteAnnotation }) => {
+import { LeafAnnotation, LeafCallbacks } from '../../types/AnnotationTypes';
+
+interface LeafAnnotationListProps {
+  plantId: string;
+  leafAnnotations: LeafAnnotation[];
+  leafCallbacks: LeafCallbacks;
+}
+
+const LeafAnnotationList = (props: LeafAnnotationListProps) => {
+  const { plantId, leafAnnotations, leafCallbacks } = props;
   const [expandedAnnotation, setExpandedAnnotation] = React.useState<any>(null);
 
   const handleToggleDropdown = (annotation: any) => {
@@ -12,21 +21,29 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
   };
   
   const findSyncEntryForAnnotation = (videoPath: string) => {
-    return syncEntries.find((entry) => entry.videoPath === videoPath);
+    return leafCallbacks.syncEntries.find((entry) => entry.videoPath === videoPath);
   };
 
   return (
     <ScrollView>
-      {annotations.map((annotation) => {
-        const syncEntry = findSyncEntryForAnnotation(annotation.video);
+
+      {/* Create Leaf Annotation Button */}
+      <TouchableOpacity style={styles.addButton} onPress={() => {
+          leafCallbacks.onEditButton(null, plantId);
+        }}>
+        <Text style={styles.addButtonText}>+ Add Leaf Annotation</Text>
+      </TouchableOpacity>
+
+      {leafAnnotations.map((leaf) => {
+        const syncEntry = findSyncEntryForAnnotation(leaf.video);
         
         return (
-          <View key={annotation.id} style={styles.annotationContainer}>
+          <View key={leaf.id} style={styles.annotationContainer}>
             <TouchableOpacity
-              onPress={() => handleToggleDropdown(annotation)}
+              onPress={() => handleToggleDropdown(leaf)}
               style={styles.annotationHeader}
             >
-              <Text style={styles.annotationTitle}>{annotation.name}</Text>
+              <Text style={styles.annotationTitle}>{leaf.name}</Text>
               
               <TouchableOpacity style={{ marginLeft: 10 }}>
                 {(() => {
@@ -72,19 +89,20 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
               </TouchableOpacity>
             </TouchableOpacity>
 
-            {expandedAnnotation?.id === annotation.id && (
+            {expandedAnnotation?.id === leaf.id && (
               <View style={styles.dropdown}>
-                <Text style={styles.videoText}>Info: {annotation.info}</Text>
-                <Text style={styles.videoText}>Location: {annotation.location.latitude}, {annotation.location.longitude}</Text>
-                <Text style={styles.videoText}>Length: {annotation.length}</Text>
-                <Text style={styles.videoText}>Leaf Number: {annotation.leafNumber}</Text>
-                <Text style={styles.videoText}>Leaf Widths: {annotation.leafWidths?.join(', ')}</Text>
-             
-                {annotation.video ? (
+                <Text style={styles.videoText}>Info: {leaf.info}</Text>
+                <Text style={styles.videoText}>Location: {leaf.location?.latitude ?? ' __ '}, {leaf.location?.longitude ?? ' __ '}</Text>
+                <Text style={styles.videoText}>Length: {leaf.length}</Text>
+                <Text style={styles.videoText}>Leaf Number: {leaf.leafNumber}</Text>
+                <Text style={styles.videoText}>Leaf Widths: {leaf.leafWidths?.join(', ')}</Text>
+                <Text style={styles.videoText}>Attached Plant: {leaf.parentPlant}</Text>
+
+                {leaf.video ? (
                   <View style={styles.videoContainer}>
                     <Text style={styles.videoText}>Attached Video:</Text>
                     <Video
-                      source={{ uri: annotation.video }} 
+                      source={{ uri: leaf.video }} 
                       style={styles.videoPlayer}
                       controls={true}
                       resizeMode="contain"
@@ -102,14 +120,14 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
 
                 <TouchableOpacity
                   style={styles.attachButton}
-                  onPress={() => onAttachVideo(annotation)}
+                  onPress={() => leafCallbacks.onAttachVideo(leaf)}
                 >
                   <Text style={styles.attachButtonText}>Attach Video</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
                   style={styles.editButton}
-                  onPress={() =>  onEditButton(annotation)}
+                  onPress={() =>  leafCallbacks.onEditButton(leaf, plantId)}
                 >
                   <Text style={styles.editButtonText}>Edit</Text>
                 </TouchableOpacity>
@@ -117,7 +135,7 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
 
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => onDeleteAnnotation(annotation.id)}
+                  onPress={() => leafCallbacks.onDeleteAnnotation(leaf)}
                 >
                   <Text style={styles.deleteButtonText}>Delete</Text>
                 </TouchableOpacity>
@@ -131,6 +149,20 @@ const AnnotationList = ({ annotations, syncEntries, onAttachVideo, onEditButton,
 };
 
 const styles = StyleSheet.create({
+
+  // Add Annotation Button
+   addButton: {
+    backgroundColor: '#1E3A5F',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 16,
+  },
+  addButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+
   // Annotation Container + Annotations
   annotationContainer: {
     marginBottom: 10,
@@ -213,5 +245,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AnnotationList;
+export default LeafAnnotationList;
 

@@ -1,22 +1,7 @@
 // AnnotationsContext.tsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-interface Location {
-  latitude: number;
-  longitude: number;
-}
-
-export interface LeafAnnotation {
-  id: number;
-  name: string;
-  info: string;
-  video: string | null;
-  location: Location | null;
-  length: string;
-  leafNumber: string;
-  leafWidths: String[];
-}
+import { LeafAnnotation } from '../../types/AnnotationTypes';
 
 interface LeafAnnotationsContextType {
   leafAnnotations: LeafAnnotation[];

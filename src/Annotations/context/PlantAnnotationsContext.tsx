@@ -1,20 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LeafAnnotation } from './LeafAnnotationsContext';
-
-interface Location {
-  latitude: number;
-  longitude: number;
-}
-
-export interface PlantAnnotation {
-  id: number;
-  name: string;
-  info: string;
-  location: Location | null;
-
-  leaves: LeafAnnotation[];
-}
+import { PlantAnnotation } from '../../types/AnnotationTypes';
 
 interface PlantAnnotationsContextType {
   plantAnnotations: PlantAnnotation[];

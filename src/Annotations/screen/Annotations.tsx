@@ -2,18 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, View, Button, StyleSheet, Text, TouchableOpacity} from 'react-native';
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
-
-import AnnotationList from './AnnotationList';
-import AnnotationModal from './AnnotationModal';
-import { useLeafAnnotations } from '../context/LeafAnnotationsContext';
-import { useSync } from '../../Sync/context/SyncContext';
-import useHandleSync from '../services/AnnotationActions';
-import { FLASK_URL, HUB_BASE_URL } from '../../constants/Config';
-
-import { useServerConfig } from '../../hooks/useServerConfig';
 import { TextInput } from 'react-native-gesture-handler';
 
+import { LeafAnnotation, PlantAnnotation, LeafCallbacks, PlantCallbacks } from '../../types/AnnotationTypes';
 
+import { useLeafAnnotations } from '../context/LeafAnnotationsContext';
+import LeafAnnotationList from '../components/LeafAnnotationList';
+import LeafAnnotationModal from '../components/LeafAnnotationModal';
+
+import { usePlantAnnotations } from '../context/PlantAnnotationsContext';
+import PlantAnnotationList from '../components/PlantAnnotationList';
+import PlantAnnotationModal from '../components/PlantAnnotationModal';
+
+import { createLeaf, updateLeaf, deleteLeaf, attachVideo, setParentPlant } from '../services/LeafHandler';
+import { createPlant, updatePlant, deletePlant, attachChildLeaf, removeChildLeaf } from '../services/PlantHandler';
+
+import { useSync } from '../../Sync/context/SyncContext';
+import useHandleSync from '../services/AnnotationActions';
+import { useServerConfig } from '../../hooks/useServerConfig';
 
 interface AnnotationsProps {
   route: RouteProp<any, any>; 
@@ -22,87 +28,112 @@ interface AnnotationsProps {
 
 const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { leafAnnotations, setLeafAnnotations, selectedLeafAnnotation, setSelectedLeafAnnotation } = useLeafAnnotations();
+  const { plantAnnotations, setPlantAnnotations, selectedPlantAnnotation, setSelectedPlantAnnotation } = usePlantAnnotations();
+
+  const [leafModalVisible, setLeafModalVisible] = useState(false);
+  const [plantModalVisible, setPlantModalVisible] = useState(false);
+
   const { syncEntries } = useSync();
-  const [modalVisible, setModalVisible] = useState(false);
+
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
   const { removeAllSyncEntry } = useSync();
-
 
   const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
   const [showServerSettings, setShowServerSettings] = useState(false);
 
   navigation = useNavigation();
 
+
   // Creates an annotation
-  const handleCreateAnnotation = (
-    name: string, 
-    latitude: string, 
-    longitude: string, 
-    info: string,
-    length: string,
-    leafNumber: string,
-    leafWidths: string[],
-    id?: number,
-    video?: string
-  ) => {
-    const parsedLeafWidths = leafWidths.map((w) => parseFloat(w)).filter((n) => !isNaN(n))
+  const handleCreateLeafAnnotation = (
+   newLeaf: LeafAnnotation,
+   plantId?: string
+  ): string => {
+    let leafId = newLeaf.id;
+    if (leafId) {
+      updateLeaf(setLeafAnnotations, newLeaf);
+    } else {
+      leafId = createLeaf(setLeafAnnotations, newLeaf);
+    }
+    setLeafModalVisible(false);
 
-    const newAnnotation = {
-      id: id || Date.now(),
-      video: video || null,
-      name,
-      info,
-      location: {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-      },
-      length: parseFloat(length),
-      leafNumber: parseInt(leafNumber),
-      leafWidths: parsedLeafWidths,
-    };
-
-    setLeafAnnotations((prev) => {
-      if (id) {
-        return prev.map((ann) => (ann.id === id ? newAnnotation : ann));
+    if (plantId) {
+      const prevPlantId = newLeaf.parentPlant;
+      if (prevPlantId){
+        removeChildLeaf(setPlantAnnotations, prevPlantId, leafId);
       }
-      return [...prev, newAnnotation];
-    });
+      setParentPlant(setLeafAnnotations, leafId, plantId);
+      attachChildLeaf(setPlantAnnotations, plantId, leafId);
+    }
 
-    setModalVisible(false);
+    return leafId;
   };
 
   // Edits an annotation
-  const handleEditAnnotation = (annotation: any) => {
-    setSelectedLeafAnnotation(annotation);
-    setModalVisible(true);
+  const handleEditLeafAnnotation = (leaf: LeafAnnotation | null, plantId?: string) => {
+    if (plantId) {
+      const plant = plantAnnotations.find((p) => p.id === plantId) || null;
+      setSelectedPlantAnnotation(plant);
+    } else {
+      setSelectedPlantAnnotation(null);
+    }
+
+    setSelectedLeafAnnotation(leaf);
+    setLeafModalVisible(true);
   }
 
+  // Deletes an annotation
+  const handleDeleteLeafAnnotation = (leaf: LeafAnnotation) => {
+    const parentPlant = leaf.parentPlant;
+    deleteLeaf(setLeafAnnotations, leaf.id, () => {
+      if (parentPlant) {
+        removeChildLeaf(setPlantAnnotations, parentPlant, leaf.id);
+      }
+    });  
+  };
+
+  // Creates an annotation
+  const handleCreatePlantAnnotation = (
+    newPlant: PlantAnnotation  
+  ): string => {
+    
+    let plantId = newPlant.id
+    if (plantId) {
+      updatePlant(setPlantAnnotations, newPlant);
+    } else {
+      plantId = createPlant(setPlantAnnotations, newPlant);
+    }
+    setPlantModalVisible(false);
+    return plantId;
+  };
+
+  // Edits an annotation
+  const handleEditPlantAnnotation = (plant: PlantAnnotation | null) => {
+    setSelectedPlantAnnotation(plant);
+    setPlantModalVisible(true);
+  }
 
   // Deletes an annotation
-  const handleDeleteAnnotation = (id: number) => {
-    Alert.alert("Confirm Deletion", "Are you sure you want to delete this annotation group?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        onPress: () => setLeafAnnotations((prev) => prev.filter((annotation) => annotation.id !== id)),
-      },
-    ]);
+  const handleDeletePlantAnnotation = (plant: PlantAnnotation) => {
+    const childLeaves = plant.childLeaves;
+    deletePlant(setPlantAnnotations, plant.id, () => {
+      childLeaves.forEach(leafId => {
+        deleteLeaf(setLeafAnnotations, leafId);
+      });
+    });
   };
 
   // Prompts you to attach a video from the VideoGallery screen
-  const handleAttachVideo = (annotation: any) => {
-    setSelectedLeafAnnotation(annotation);
+  const handleAttachVideo = (leaf: LeafAnnotation) => {
+    setSelectedLeafAnnotation(leaf);
     navigation.navigate('VideoGallery')
   };
   
   // Upon video selection, attaches the video to the annotation
   const handleVideoSelect = (videoPath: string) => {
-    setLeafAnnotations((prev) =>
-      prev.map((ann) =>
-        ann.id === selectedLeafAnnotation?.id ? { ...ann, video: videoPath } : ann
-      )
-    );
+    const leafId = selectedLeafAnnotation.id;
+    attachVideo(setLeafAnnotations, leafId, videoPath);
   };
   
   // If videoUri is passed via params, auto-select that video
@@ -111,6 +142,19 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       handleVideoSelect(route.params.selectedVideo);
     }
   }, [route.params?.selectedVideo]);
+
+
+  const leafCallbacks : LeafCallbacks = {
+    syncEntries: syncEntries,
+    onAttachVideo: handleAttachVideo,
+    onEditButton: handleEditLeafAnnotation,
+    onDeleteAnnotation: handleDeleteLeafAnnotation
+  }
+
+  const plantCallbacks : PlantCallbacks = {
+    onEditButton: handleEditPlantAnnotation,
+    onDeleteAnnotation: handleDeletePlantAnnotation
+  }
 
   return (
     <View style={styles.container}>
@@ -202,30 +246,37 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         </View>
       )}
 
-      {/* Create Annotation Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => {
-        setSelectedLeafAnnotation({});
-        setModalVisible(true);
-      }}>
-        <Text style={styles.addButtonText}>+ Add Annotation</Text>
-      </TouchableOpacity>
-
-      {/* Annotations List */}
-      <AnnotationList
-        annotations={leafAnnotations}
-        syncEntries={syncEntries}
-        onAttachVideo={handleAttachVideo}
-        onEditButton={handleEditAnnotation}
-        onDeleteAnnotation={handleDeleteAnnotation}
+      {/* Leaf Annotations List */}
+      <LeafAnnotationList
+        plantId={'All'}
+        leafAnnotations={leafAnnotations}
+        leafCallbacks={leafCallbacks}
       />
 
-      {/* Modal to create annotations */}
-      <AnnotationModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onCreateAnnotation={handleCreateAnnotation}
-        initialValues={selectedLeafAnnotation}
+      {/* Modal to create leaf annotations */}
+      <LeafAnnotationModal
+        visible={leafModalVisible}
+        onClose={() => setLeafModalVisible(false)}
+        onCreateAnnotation={handleCreateLeafAnnotation}
+        selectedLeaf={selectedLeafAnnotation}
+        selectedPlant={selectedPlantAnnotation}
       />
+
+      {/* Plant Annotations List */}
+      <PlantAnnotationList
+        plantAnnotations={plantAnnotations}
+        plantCallbacks={plantCallbacks}
+        leafAnnotations={leafAnnotations}
+        leafCallbacks={leafCallbacks}
+      />
+
+      {/* Modal to create leaf annotations */}
+      <PlantAnnotationModal
+        visible={plantModalVisible}
+        onClose={() => setPlantModalVisible(false)}
+        onCreateAnnotation={handleCreatePlantAnnotation}
+        selectedPlant={selectedPlantAnnotation}
+      />      
 
       {/* Sync Results Display */}
       {syncResult && (

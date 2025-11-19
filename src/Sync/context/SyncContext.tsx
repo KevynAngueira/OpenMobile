@@ -94,8 +94,7 @@ export const SyncProvider: React.FC = ({ children }) => {
       params,
       videoUploadStatus: 'new',
       paramUploadStatus: 'new',
-      videoInferenceStatus: 'new',
-      paramInferenceStatus: 'new',
+      inferenceStatus: 'new',
     };
     return [...entries, newEntry];
   }

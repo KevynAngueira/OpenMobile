@@ -1,77 +1,77 @@
-// AnnotationModal.tsx
+// LeafAnnotationModal.tsx
 import React, { useState,  useEffect } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, Button } from 'react-native';
 import { isLeafDetailsValid } from '../utils/AnnotationValidation';
+import { LeafAnnotation, Location } from '../../types/AnnotationTypes';
 
-const AnnotationModal = ({ visible, onClose, onCreateAnnotation, initialValues}) => {
-  const [id, setId] = useState('')
-  const [video, setVideo] = useState('')
-  const [name, setName] = useState('');
-  const [info, setInfo] = useState('');
+
+const DEFAULT_LOCATION : Location = {
+  'latitude': 500,
+  'longitude': 500
+}
+
+const EMPTY_LEAF: LeafAnnotation = {
+  id: null,
+  name: "",
+  info: "",
+  location: DEFAULT_LOCATION,
+  leafNumber: "",
+  leafWidths: [],
+  length: "",
+  video: null,
   
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
+  parentPlant: "",
+};
+
+const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLeaf, selectedPlant}) => {
+  const [leaf, setLeaf] = useState<LeafAnnotation>(EMPTY_LEAF);
+  
+  const [latitude, setLatitude] = useState(500);
+  const [longitude, setLongitude] = useState(500);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
-  
-  const [length, setLength] = useState('');
-  const [leafNumber, setLeafNumber] = useState('');
-  const [leafWidths, setLeafWidths] = useState(Array(8).fill(''));
+
   const [leafWidthsText, setLeafWidthsText] = useState("");
   const [showLeafDetails, setShowLeafDetails] = useState(false);
 
-   useEffect(() => {
-    const fetchLocation = async () => {
-      setLatitude(500);
-      setLongitude(500);
-    };
-
-    if (!useCustomLocation) {
-      fetchLocation();
-    }
-  }, [useCustomLocation]);
-
   useEffect(() => {
-    if (initialValues) {
-      setId(initialValues.id || '');
-      setVideo(initialValues.video || '');
-      
-      setName(initialValues.name || '');
-      setInfo(initialValues.info || '');
-      
-      setLatitude(initialValues.location?.latitude?.toString() || '');
-      setLongitude(initialValues.location?.longitude?.toString() || '');
-      setLength(initialValues.length?.toString() || '');
-      
-      setLeafNumber(initialValues.leafNumber?.toString() || '');
-      setLeafWidths(initialValues.leafWidths || Array(8).fill(''));
-      setLeafWidthsText(initialValues.leafWidths?.join(', ') || '');
-      
-      setShowLeafDetails(true);
-      setUseCustomLocation(initialValues?.id ? true : false); 
+    console.log(selectedLeaf)
+    if (selectedLeaf) {
+      setLeaf(selectedLeaf);
+      setUseCustomLocation(selectedLeaf?.id ? true : false); 
+    } else {
+      setLeaf(EMPTY_LEAF);
+      setUseCustomLocation(false); 
     }
-  }, [initialValues]);
+    setShowLeafDetails(true);
+  }, [selectedLeaf]);
 
   const handleCreate = () => {
-    onCreateAnnotation(name, latitude, longitude, info, length, leafNumber, leafWidths, id, video);
+    const location = {
+      "latitude": latitude,
+      "longitude": longitude
+    };
+    const updatedLeaf = {...leaf, location: location};
+    setLeaf(updatedLeaf);
+    onCreateAnnotation(updatedLeaf, selectedPlant?.id);
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>New Annotation Group</Text>
+          <Text style={styles.modalTitle}>New Leaf Annotation</Text>
           <TextInput
             placeholder="Enter annotation name"
             style={styles.input}
-            value={name}
-            onChangeText={setName}
+            value={leaf.name}
+            onChangeText={(text) => {setLeaf({...leaf, name: text})}}
           />
           
           <TextInput
             placeholder="Enter annotation info"
             style={styles.input}
-            value={info}
-            onChangeText={setInfo}
+            value={leaf.info}
+            onChangeText={(text) => {setLeaf({...leaf, info: text})}}
           />
 
           {/* Leaf Details Section */}
@@ -79,7 +79,7 @@ const AnnotationModal = ({ visible, onClose, onCreateAnnotation, initialValues})
             <Button
               title={showLeafDetails ? 'Hide Leaf Details' : 'Enter Leaf Details'}
               onPress={() => setShowLeafDetails(!showLeafDetails)}
-              color={isLeafDetailsValid(length, leafNumber, leafWidths) ? '#4CAF50' : '#B0B0B0'}
+              color={isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.leafWidths) ? '#4CAF50' : '#B0B0B0'}
             />
           </View>
 
@@ -90,16 +90,16 @@ const AnnotationModal = ({ visible, onClose, onCreateAnnotation, initialValues})
               <TextInput
                 placeholder="Enter current length (in)"
                 style={styles.input}
-                value={length}
-                onChangeText={setLength}
+                value={leaf.length}
+                onChangeText={(text) => setLeaf({ ...leaf, length: text })}
                 keyboardType="numeric"
               />
 
               <TextInput
                 placeholder="Enter leaf number (7–21)"
                 style={styles.input}
-                value={leafNumber}
-                onChangeText={setLeafNumber}
+                value={leaf.leafNumber}
+                onChangeText={(text) => setLeaf({ ...leaf, leafNumber: text })}
                 keyboardType="numeric"
               />
 
@@ -109,14 +109,16 @@ const AnnotationModal = ({ visible, onClose, onCreateAnnotation, initialValues})
                 value={leafWidthsText}
                 onChangeText={(text) => {
                   setLeafWidthsText(text);
+
                   const widths = text
                     .split(',')
                     .map(w => w.trim())
                     .filter(w => w !== '' && !isNaN(Number(w)))
-                    .map(Number);
-                  setLeafWidths(widths);
+                    .map(String);
+
+                  setLeaf({...leaf, leafWidths: widths});
                 }}
-                onBlur={() => setLeafWidthsText(leafWidths.join(', '))}
+                onBlur={() => setLeafWidthsText(leaf.leafWidths.join(', '))}
                 keyboardType="numeric"
               />
             </View>
@@ -129,8 +131,8 @@ const AnnotationModal = ({ visible, onClose, onCreateAnnotation, initialValues})
               onPress={() => {
                 setUseCustomLocation(!useCustomLocation);
                 if (!useCustomLocation) {
-                  setLatitude('');
-                  setLongitude('');
+                  setLatitude(500);
+                  setLongitude(500);
                 }
             }} 
               color={
@@ -160,7 +162,7 @@ const AnnotationModal = ({ visible, onClose, onCreateAnnotation, initialValues})
           
           <View style={styles.modalButtons}>
             <Button title="Cancel" onPress={onClose} />
-            <Button title={initialValues?.id ? "Confirm" : "Create"} onPress={handleCreate} />
+            <Button title={selectedLeaf?.id ? "Confirm" : "Create"} onPress={handleCreate} />
           </View>
         </View>
       </View>
@@ -202,5 +204,5 @@ const styles = StyleSheet.create({
   }
 });
 
-export default AnnotationModal;
+export default LeafAnnotationModal;
 
