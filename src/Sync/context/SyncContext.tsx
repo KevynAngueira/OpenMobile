@@ -4,21 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { sendMedia, sendParams } from '../../utils/MediaUploader';
-// import { FLASK_URL } from '../../constants/Config';
-
-interface SyncEntry {
-  id: string;
-  videoPath: string;
-  params?: Record<string, any>;
-
-  videoUploadStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
-  paramUploadStatus: 'new' | 'uploading' | 'uploaded' | 'failed';
-  videoUploadResponse?: any;
-  paramUploadResponse?: any;
-  
-  inferenceStatus: 'new' | 'waiting' | 'running' | 'completed' | 'failed';  
-  inferenceResponse?: any;
-}
+import { SyncEntry } from '../../types/SyncTypes';
 
 interface SyncContextType {
   syncEntries: SyncEntry[];
@@ -26,7 +12,7 @@ interface SyncContextType {
   updateSyncEntry: (id: string, updates: Partial<SyncEntry>) => void;
   removeSyncEntry: (id: string) => Promise<void>;
   removeAllSyncEntry: () => Promise<void>;
-  syncAllPending: () => Promise<void>;Pending
+  syncAllPending: () => Promise<void>;
 }
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
@@ -269,14 +255,10 @@ export const SyncProvider: React.FC = ({ children }) => {
         setSyncEntries(updatedEntries);
       }
 
-
-      console.log(`------------- ${entry.paramUploadStatus}`)
       if (!paramsAttached) {
         uploadParams(serverURL, entry, setSyncResult);
         setSyncEntries(updatedEntries);
       }
-      console.log(`------------- ${entry.paramUploadResponse}`)
-      console.log(`------------- ${entry.paramUploadStatus}`)
     }
 
     return updatedEntries;

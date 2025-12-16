@@ -4,6 +4,7 @@ import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-nati
 import Ionicons from '@react-native-vector-icons/material-icons';
 import LeafAnnotationList from './LeafAnnotationList';
 
+import { PlantStatusIndicator } from './PlantStatusIndicator';
 import { LeafAnnotation, PlantAnnotation, LeafCallbacks, PlantCallbacks } from '../../types/AnnotationTypes';
 
 interface PlantAnnotationListProps {
@@ -30,8 +31,13 @@ const PlantAnnotationList = (props : PlantAnnotationListProps ) => {
         <Text style={styles.addButtonText}>+ Add Plant Annotation</Text>
       </TouchableOpacity>
 
-      {plantAnnotations.map((plant) => {
-        const leavesForPlant = leafAnnotations.filter(l => l.parentPlant === plant.id);
+      {plantAnnotations
+        .slice()   // avoid mutating props
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((plant) => {
+          
+        const leavesForPlant = plantCallbacks.getLeaves(plant.childLeaves);
+        const syncEntriesForPlant = leavesForPlant.map(leaf => leafCallbacks.getSyncEntry(leaf.video)).filter(Boolean);
 
         return (
           <View key={plant.id} style={styles.annotationContainer}>
@@ -40,13 +46,26 @@ const PlantAnnotationList = (props : PlantAnnotationListProps ) => {
               style={styles.annotationHeader}
             >
               <Text style={styles.annotationTitle}>{plant.name}</Text>
+              <PlantStatusIndicator 
+                entries={syncEntriesForPlant}
+              />
             </TouchableOpacity>
 
             {expandedAnnotation?.id === plant.id && (
               <View style={styles.dropdown}>
-                <Text style={styles.videoText}>Info: {plant.info}</Text>
-                <Text style={styles.videoText}>Location: {plant.location?.latitude ?? ' __ '}, {plant.location?.longitude ?? ' __ '}</Text>
-                <Text style={styles.videoText}>Attached Leaves: {plant.childLeaves.join(', ')}</Text>
+                 <Text style={styles.tabTitle}>Plant Information</Text>
+                
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Info:</Text>
+                  <Text style={styles.infoValue}>{plant.info || "—"}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Location:</Text>
+                  <Text style={styles.infoValue}>
+                    {plant.location?.latitude ?? "—"}, {plant.location?.longitude ?? "—"}
+                  </Text>
+                </View>
 
                 <LeafAnnotationList
                   plantId={plant.id ?? 'All'}
@@ -77,100 +96,110 @@ const PlantAnnotationList = (props : PlantAnnotationListProps ) => {
 };
 
 const styles = StyleSheet.create({
-  // Add Annotation Button
+  // Add Plant Button
   addButton: {
     backgroundColor: '#1E3A5F',
     padding: 10,
-    borderRadius: 5,
-    marginBottom: 16,
+    borderRadius: 6,
+    marginBottom: 18,
   },
   addButtonText: {
     color: '#fff',
     textAlign: 'center',
     fontSize: 16,
+    fontWeight: '600',
   },
 
-  // Annotation Container + Annotations
+  // Plant Container
   annotationContainer: {
-    marginBottom: 10,
+    marginBottom: 14,
   },
   annotationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E0E0E0',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#D6D6D6',
+    padding: 12,
+    borderRadius: 6,
+
+    // visual distinction
+    borderLeftWidth: 5,
+    borderLeftColor: '#1E3A5F',
   },
   annotationTitle: {
-    fontSize: 18,
+    fontSize: 19,
+    fontWeight: '600',
     flex: 1,
+    color: '#222',
   },
-  
-  // Dropdown Container
+
+  // Plant Dropdown
   dropdown: {
-    backgroundColor: '#F0F4F8',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
-    borderColor: '#C0C0C0',
+    backgroundColor: '#F3F7FB',
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 6,
+    borderColor: '#B8C6D1',
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 1,
   },
-  
-  // Attach Video Button
-  attachButton: {
-    backgroundColor: '#1E3A5F',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
-  },
-  attachButtonText: {
-    color: '#fff',
-    textAlign: 'center',
+
+  videoText: {
+    marginTop: 4,
+    fontSize: 15,
   },
 
-  // Edit Annotation Button
   editButton: {
     backgroundColor: '#4CAF50',
     padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
+    borderRadius: 6,
+    marginTop: 10,
   },
   editButtonText: {
     color: '#fff',
     textAlign: 'center',
+    fontSize: 15,
   },
-  
-  // Delete Annotation Button
+
   deleteButton: {
-    backgroundColor: 'red',
+    backgroundColor: '#d9534f',
     padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
+    borderRadius: 6,
+    marginTop: 8,
   },
   deleteButtonText: {
     color: '#fff',
     textAlign: 'center',
+    fontSize: 15,
   },
-  
-  // Attached Video
-  videoText: {
-    marginTop: 5,
-    fontSize: 16,
+
+  // NEW -----------------
+  tabTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+    color: "#333",
   },
-  videoContainer: {
-    marginTop: 10,
+
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: 6,
   },
-  videoPlayer: {
-    width: '100%',
-    height: 200,
-    borderRadius: 5,
+  infoLabel: {
+    fontWeight: "800",
+    color: "#444",
+    fontSize: 18,
+    width: 120,
   },
+  infoValue: {
+    flex: 1,
+    color: "#222",
+    fontSize: 18,
+  },
+
 });
 
 export default PlantAnnotationList;
-

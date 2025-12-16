@@ -37,9 +37,11 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
     console.log(selectedLeaf)
     if (selectedLeaf) {
       setLeaf(selectedLeaf);
+      setLeafWidthsText(selectedLeaf?.leafWidths?.join(', ') ?? "");
       setUseCustomLocation(selectedLeaf?.id ? true : false); 
     } else {
       setLeaf(EMPTY_LEAF);
+      setLeafWidthsText("");
       setUseCustomLocation(false); 
     }
     setShowLeafDetails(true);

@@ -22,6 +22,9 @@ const useHandleSync = () => {
       .filter((leafAnnotation) => {
         const validVideo = leafAnnotation.video;
         const validLeaf = isLeafDetailsValid(leafAnnotation.length, leafAnnotation.leafNumber, leafAnnotation.leafWidths);
+        console.log("===================");
+        console.log(validVideo);
+        console.log(validLeaf);
         return validVideo && validLeaf
       })
       .map((leafAnnotation) => ({

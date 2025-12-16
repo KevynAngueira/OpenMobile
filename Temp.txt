@@ -1,0 +1,310 @@
+package com.openmobile
+
+import android.util.Log
+import android.graphics.Bitmap
+import android.util.Base64
+import com.facebook.react.bridge.*
+
+import org.opencv.android.OpenCVLoader
+import org.opencv.core.Core
+import org.opencv.core.Mat
+import org.opencv.core.Scalar
+import org.opencv.android.Utils
+import org.opencv.videoio.VideoCapture
+import org.opencv.videoio.Videoio
+import org.opencv.imgproc.Imgproc
+
+import org.opencv.core.Point
+import org.opencv.core.Size
+import org.opencv.core.RotatedRect
+import org.opencv.core.MatOfPoint
+import org.opencv.core.MatOfPoint2f
+import org.opencv.core.CvType
+import org.opencv.core.Rect
+
+import java.io.ByteArrayOutputStream
+import android.media.MediaMetadataRetriever
+
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.channels.FileChannel
+import java.io.FileInputStream
+
+import ai.onnxruntime.*
+
+class OpenCVModule(reactContext: ReactApplicationContext) :
+    ReactContextBaseJavaModule(reactContext) {
+
+    override fun getName() = "OpenCV"
+
+    init {
+        // Load OpenCV library
+        if (!OpenCVLoader.initDebug()) {
+            throw RuntimeException("Unable to load OpenCV")
+        }
+    }
+    
+    private val LAB_LOWER = Scalar(55.0, 142.0, 100.0)
+    private val LAB_UPPER = Scalar(255.0, 255.0, 136.0)
+
+    private fun loadNpyFloatArrayFromAssets(name: String): FloatArray {
+        reactApplicationContext.assets.open(name).use { stream ->
+            val headerBuf = ByteArray(128)  // read header first
+            val readBytes = stream.read(headerBuf)
+            val headerStr = String(headerBuf, 0, readBytes)
+            val littleEndian = headerStr.contains("'fortran_order': False")
+            val shapeRegex = Regex("'shape': \\(([^\\)]*)\\)")
+            val shape = shapeRegex.find(headerStr)?.groupValues?.get(1)
+                ?.split(",")?.map { it.trim().toIntOrNull() ?: 1 } ?: listOf(1)
+            val numElements = shape.reduce { acc, i -> acc * i }
+    
+            // Read raw data
+            val dataBuf = ByteArray(numElements * 4)
+            stream.read(dataBuf)
+            val bb = ByteBuffer.wrap(dataBuf)
+            bb.order(if (littleEndian) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN)
+            val arr = FloatArray(numElements)
+            bb.asFloatBuffer().get(arr)
+            return arr
+        }
+    }
+    
+    private fun load2DFloatArrayFromAssets(name: String, rows: Int, cols: Int): Array<FloatArray> {
+        val flat = loadNpyFloatArrayFromAssets(name)
+        val out = Array(rows) { FloatArray(cols) }
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                out[r][c] = flat[r * cols + c]
+            }
+        }
+        return out
+    }    
+
+    private val pcaMean: FloatArray by lazy { loadNpyFloatArrayFromAssets("mean_5.npy") }
+    private val pcaComponents: Array<FloatArray> by lazy { load2DFloatArrayFromAssets("components_5.npy", 5, pcaMean.size) }
+
+    private fun applyLabMask(frame: Mat): Mat {
+        val lab = Mat()
+        Imgproc.cvtColor(frame, lab, Imgproc.COLOR_BGR2Lab)
+
+        val mask = Mat()
+        Core.inRange(lab, LAB_LOWER, LAB_UPPER, mask)
+
+        lab.release()
+        return mask
+    }
+
+    private fun bitmapToMat(bitmap: Bitmap): Mat {
+        val mat = Mat()
+        val bmp32 = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        org.opencv.android.Utils.bitmapToMat(bmp32, mat)
+        return mat
+    }
+
+    private fun matToFloatArray(mat: Mat): FloatArray {
+        val rows = mat.rows()
+        val cols = mat.cols()
+        val floatArray = FloatArray(rows * cols)
+        val gray = Mat()
+        if (mat.channels() == 3) {
+            Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
+        } else {
+            mat.copyTo(gray)
+        }
+    
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                floatArray[r * cols + c] = gray.get(r, c)[0].toFloat()
+            }
+        }
+        gray.release()
+        return floatArray
+    }
+    
+    private fun findCandidateRects(mask: Mat, minThresh: Double = 0.025, maxThresh: Double = 0.50): List<RotatedRect> {
+
+        val imgArea = mask.rows() * mask.cols()
+        val minArea = imgArea * minThresh
+        val maxArea = imgArea * maxThresh
+
+        // Clean mask
+        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(3.0, 3.0))
+        val maskClean = Mat()
+        Imgproc.morphologyEx(mask, maskClean, Imgproc.MORPH_OPEN, kernel, Point(-1.0, -1.0), 2)
+
+        val contours = ArrayList<MatOfPoint>()
+        Imgproc.findContours(maskClean, contours, Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+
+        val candidates = ArrayList<RotatedRect>()
+
+        for (cnt in contours) {
+
+            val cnt2f = MatOfPoint2f(*cnt.toArray())
+            val rect = Imgproc.minAreaRect(cnt2f)
+
+            val size = rect.size
+            val w = size.width
+            val h = size.height
+            val area = w * h
+
+            if (area in minArea..maxArea)
+                candidates.add(rect)
+        }
+
+        return candidates
+    }
+
+    private fun cropRotatedRect(image: Mat, rect: RotatedRect, outSize: Size = Size(144.0, 64.0)): Mat? {
+
+        var angle = rect.angle
+        var size = rect.size
+
+        // If height > width → swap + rotate 90°
+        var W = size.width
+        var H = size.height
+
+        if (H > W) {
+            val tmp = W
+            W = H
+            H = tmp
+            angle += 90
+        }
+
+        val center = rect.center
+
+        val rotationMat = Imgproc.getRotationMatrix2D(center, angle, 1.0)
+
+        val rotated = Mat()
+        Imgproc.warpAffine(image, rotated, rotationMat, image.size())
+
+        val x = center.x.toInt()
+        val y = center.y.toInt()
+
+        val x0 = x - (W / 2).toInt()
+        val y0 = y - (H / 2).toInt()
+        val x1 = x + (W / 2).toInt()
+        val y1 = y + (H / 2).toInt()
+
+        if (x0 < 0 || y0 < 0 || x1 > rotated.cols() || y1 > rotated.rows())
+            return null
+
+        val crop = rotated.submat(y0, y1, x0, x1)
+
+        // Resize to PCA size
+        val resized = Mat()
+        Imgproc.resize(crop, resized, outSize)
+
+        return resized
+    }
+
+    // --- PCA reconstruction ---
+    private fun computeReconstructionError(inputVec: FloatArray): Double {
+        val k = pcaComponents.size
+        val n = inputVec.size
+        val centered = FloatArray(n) { i -> inputVec[i] - pcaMean[i] }
+    
+        // Project
+        val proj = FloatArray(k) { j ->
+            var sum = 0f
+            for (i in 0 until n) sum += centered[i] * pcaComponents[j][i]
+            sum
+        }
+    
+        // Reconstruct
+        val recon = FloatArray(n) { i ->
+            var sum = 0f
+            for (j in 0 until k) sum += proj[j] * pcaComponents[j][i]
+            pcaMean[i] + sum
+        }
+
+        Log.d("PCA_TEST", "Proj first 5: ${proj.slice(0..4)}")
+        Log.d("PCA_TEST", "Recon first 5: ${recon.slice(0..4)}")
+    
+        // Compute MSE
+        var mse = 0.0
+        for (i in 0 until n) {
+            val diff = inputVec[i] - recon[i]
+            mse += diff * diff
+        }
+    
+        return mse / n
+    }
+    
+
+    // ====== React Methods ======
+
+    @ReactMethod
+    fun ping(message: String, promise: Promise) {
+        promise.resolve("Kotlin received: $message")
+    }
+
+    @ReactMethod
+    fun loadVideoFrames(path: String, promise: Promise) {
+        try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(path)
+            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0
+            val framesToGrab = 10
+            val intervalMs = durationMs / framesToGrab
+
+            val framesArray = Arguments.createArray()
+
+            for (i in 0 until framesToGrab) {
+                val frameTimeUs = i * intervalMs * 1000  // ms → µs
+                val bitmap = retriever.getFrameAtTime(
+                    frameTimeUs,
+                    MediaMetadataRetriever.OPTION_CLOSEST
+                )
+
+                if (bitmap != null) {
+
+                    // Convert to Mat
+                    val frameMat = bitmapToMat(bitmap)
+
+                    // Apply LAB mask
+                    val maskMat = applyLabMask(frameMat)
+
+                    val rects = findCandidateRects(maskMat)
+
+                    for (rect in rects) {
+                        val crop = cropRotatedRect(frameMat, rect)
+                        if (crop != null) {
+
+                            val vec = matToFloatArray(crop)
+                            val mse = computeReconstructionError(vec)
+
+                            Log.d("OpenCV", "Candidate MSE = $mse")
+
+                            val bmp = Bitmap.createBitmap(crop.cols(), crop.rows(), Bitmap.Config.ARGB_8888)
+                            Utils.matToBitmap(crop, bmp)
+
+                            val stream = ByteArrayOutputStream()
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                            val b64 = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
+
+                            val obj = Arguments.createMap()
+                            obj.putString("image", "data:image/png;base64,$b64")
+                            obj.putDouble("error", mse)
+
+                            framesArray.pushMap(obj)
+                            
+                        }
+                    }
+                }
+            }
+
+            retriever.release()
+            promise.resolve(framesArray)
+        } catch (e: Exception) {
+            promise.reject("LOAD_ERROR", e)
+        }
+    }
+}
+
+
+I am trying to implement a Kotlin script for an Android Mobile App that runs classifies frames in a video as tools or non-tools based on a PCA reconstruction error threshold. 
+
+Kotlin does not have good integration for .npy files and this led to constant inconsistencies and errors due to non matching transformations and flattening
+
+Help me change this script to use pca.onnx file instead. In theory .onnx should allow for language independent PCA with no issues

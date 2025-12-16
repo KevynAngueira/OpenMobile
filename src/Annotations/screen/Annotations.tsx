@@ -21,6 +21,12 @@ import { useSync } from '../../Sync/context/SyncContext';
 import useHandleSync from '../services/AnnotationActions';
 import { useServerConfig } from '../../hooks/useServerConfig';
 
+import { useAnnotationMaps } from '../../hooks/useAnnotationMaps';
+import { useSyncMaps } from '../../hooks/useSyncMaps';
+
+import ToolClassifierView from '../../Validation/components/ToolClassifierView'
+import ToolCandidateView from '../../Validation/components/ToolCandidateView'
+
 interface AnnotationsProps {
   route: RouteProp<any, any>; 
   navigation: any;
@@ -35,12 +41,19 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
   const { syncEntries } = useSync();
 
+  const { plantIdToName, leafIdToName, listToLeaves } = useAnnotationMaps(plantAnnotations, leafAnnotations);
+  const { videoToSync } = useSyncMaps(syncEntries);
+
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
   const { removeAllSyncEntry } = useSync();
 
   const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
   const [showServerSettings, setShowServerSettings] = useState(false);
+
+  const [viewMode, setViewMode] = useState<'plant' | 'leaf'>('plant');
+
+  const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
 
   navigation = useNavigation();
 
@@ -134,8 +147,45 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const handleVideoSelect = (videoPath: string) => {
     const leafId = selectedLeafAnnotation.id;
     attachVideo(setLeafAnnotations, leafId, videoPath);
+    setSelectedVideoPath(videoPath);
   };
   
+
+  const handleResetClient = () => {
+    Alert.alert(
+      "Confirm Reset",
+      "Are you sure you want to delete all entries?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Yes", style: "destructive", onPress: () => removeAllSyncEntry() }
+      ]
+    );
+  };
+
+  const handleResetServer = () => {
+    Alert.alert(
+      "Confirm Server Reset",
+      "Are you sure you want to reset the server cache?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Yes", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              const response = await fetch(`${serverURL}/reset`);
+              const data = await response.json();
+              Alert.alert("Server Reset", data.message || "Server cache reset.");
+            } catch (err) {
+              Alert.alert("Error", `Failed to reset server: ${err.message}`);
+            }
+          } 
+        }
+      ]
+    );
+  };
+
+
   // If videoUri is passed via params, auto-select that video
   useEffect(() => {
     if (route.params?.selectedVideo) {
@@ -143,38 +193,55 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     }
   }, [route.params?.selectedVideo]);
 
-
   const leafCallbacks : LeafCallbacks = {
     syncEntries: syncEntries,
     onAttachVideo: handleAttachVideo,
     onEditButton: handleEditLeafAnnotation,
-    onDeleteAnnotation: handleDeleteLeafAnnotation
+    onDeleteAnnotation: handleDeleteLeafAnnotation,
+    getSyncEntry: videoToSync,
+    getPlantName: plantIdToName
   }
 
   const plantCallbacks : PlantCallbacks = {
     onEditButton: handleEditPlantAnnotation,
-    onDeleteAnnotation: handleDeletePlantAnnotation
+    onDeleteAnnotation: handleDeletePlantAnnotation,
+    getLeafName: leafIdToName,
+    getLeaves: listToLeaves
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Annotations</Text>
 
+      {/* Toggle Switch: Plant / Leaf view */}
+      <View style={styles.toggleContainer}>
+        <Text style={styles.toggleLabel}>View Mode:</Text>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            viewMode === 'plant' ? styles.toggleButtonActive : {}
+          ]}
+          onPress={() => setViewMode('plant')}
+        >
+          <Text style={styles.toggleButtonText}>Plant</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            viewMode === 'leaf' ? styles.toggleButtonActive : {}
+          ]}
+          onPress={() => setViewMode('leaf')}
+        >
+          <Text style={styles.toggleButtonText}>Leaf</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Reset Buttons */}
       <View style={{ flexDirection: 'row' }}>
         {/* Reset Entries */}
         <TouchableOpacity
           style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
-          onPress={() => {
-            Alert.alert(
-              "Confirm Reset",
-              "Are you sure you want to delete all entries?",
-              [
-                { text: "Cancel", style: "cancel" },
-                { text: "Yes", style: "destructive", onPress: () => removeAllSyncEntry() }
-              ]
-            );
-          }}
+          onPress={handleResetClient}
         >
           <Text style={{ color: 'white' }}>Reset Entries</Text>
         </TouchableOpacity>
@@ -182,33 +249,12 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         {/* Reset Server */}
         <TouchableOpacity
           style={{ backgroundColor: '#FF9800', padding: 8, borderRadius: 6 }}
-          onPress={() => {
-            Alert.alert(
-              "Confirm Server Reset",
-              "Are you sure you want to reset the server cache?",
-              [
-                { text: "Cancel", style: "cancel" },
-                { 
-                  text: "Yes", 
-                  style: "destructive", 
-                  onPress: async () => {
-                    try {
-                      const response = await fetch(`${serverURL}/reset`);
-                      const data = await response.json();
-                      Alert.alert("Server Reset", data.message || "Server cache reset.");
-                    } catch (err) {
-                      Alert.alert("Error", `Failed to reset server: ${err.message}`);
-                    }
-                  } 
-                }
-              ]
-            );
-          }}
+          onPress={handleResetServer}
         >
           <Text style={{ color: 'white' }}>Reset Server</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* Server IP Input */}
       <View>
         <Button
@@ -246,12 +292,11 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         </View>
       )}
 
-      {/* Leaf Annotations List */}
-      <LeafAnnotationList
-        plantId={'All'}
-        leafAnnotations={leafAnnotations}
-        leafCallbacks={leafCallbacks}
-      />
+      {selectedVideoPath && (
+        <View style={{ marginVertical: 16, borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}>
+          <ToolCandidateView videoPath={selectedVideoPath} />
+        </View>
+      )}
 
       {/* Modal to create leaf annotations */}
       <LeafAnnotationModal
@@ -262,14 +307,6 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         selectedPlant={selectedPlantAnnotation}
       />
 
-      {/* Plant Annotations List */}
-      <PlantAnnotationList
-        plantAnnotations={plantAnnotations}
-        plantCallbacks={plantCallbacks}
-        leafAnnotations={leafAnnotations}
-        leafCallbacks={leafCallbacks}
-      />
-
       {/* Modal to create leaf annotations */}
       <PlantAnnotationModal
         visible={plantModalVisible}
@@ -277,6 +314,27 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         onCreateAnnotation={handleCreatePlantAnnotation}
         selectedPlant={selectedPlantAnnotation}
       />      
+
+      {/* Conditional Rendering */}
+      {viewMode === 'plant' ? (
+        <PlantAnnotationList
+          plantAnnotations={plantAnnotations}
+          plantCallbacks={plantCallbacks}
+          leafAnnotations={leafAnnotations}
+          leafCallbacks={leafCallbacks}
+        />
+      ) : (
+        <LeafAnnotationList
+          plantId="All"
+          leafAnnotations={leafAnnotations}
+          leafCallbacks={{
+            ...leafCallbacks,
+            onEditButton: () => {},
+            onAttachVideo: () => {},
+            syncEntries: leafCallbacks.syncEntries
+          }}
+        />
+      )}
 
       {/* Sync Results Display */}
       {syncResult && (
@@ -307,6 +365,29 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
+  },
+
+  // Toggle Switch
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    marginRight: 10,
+  },
+  toggleButton: {
+    backgroundColor: '#ccc',
+    padding: 8,
+    borderRadius: 6,
+    marginRight: 5,
+  },
+  toggleButtonActive: {
+    backgroundColor: '#1E3A5F',
+  },
+  toggleButtonText: {
+    color: 'white',
   },
   
   // Add Annotation Button

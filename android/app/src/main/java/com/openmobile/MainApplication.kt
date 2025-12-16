@@ -11,6 +11,9 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
+import com.openmobile.OpenCVPackage
+import com.openmobile.MediaStorePackage
+import com.openmobile.toolclassifier.ToolClassifierPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -20,6 +23,8 @@ class MainApplication : Application(), ReactApplication {
             PackageList(this).packages.apply {
               // Packages that cannot be autolinked yet can be added manually here
               add(MediaStorePackage())
+              add(OpenCVPackage())
+              add(ToolClassifierPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

@@ -12,6 +12,8 @@ import Annotations from './src/Annotations/screen/Annotations';
 import VideoGallery from './src/VideoGallery/components/VideoGallery';
 import CameraScreen from './src/SnapMedia/components/CameraScreen';
 
+import { ping } from './src/native/OpenCVBridge';
+
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -21,7 +23,7 @@ const App = () => {
 
   return (
     <PlantAnnotationsProvider>
-    <LeafAnnotationsProvider>
+      <LeafAnnotationsProvider>
         <SyncProvider>
           <NavigationContainer>
             <Stack.Navigator initialRouteName="Annotations">
@@ -31,7 +33,7 @@ const App = () => {
             </Stack.Navigator>
           </NavigationContainer>
         </SyncProvider>
-    </LeafAnnotationsProvider>
+      </LeafAnnotationsProvider>
     </PlantAnnotationsProvider>
   );
 };
