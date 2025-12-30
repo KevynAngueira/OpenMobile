@@ -13,7 +13,8 @@ import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 import com.openmobile.OpenCVPackage
 import com.openmobile.MediaStorePackage
-import com.openmobile.toolclassifier.ToolClassifierPackage
+import com.openmobile.UtilsPackage
+import com.openmobile.ValidationService.ToolClassifierPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -25,6 +26,7 @@ class MainApplication : Application(), ReactApplication {
               add(MediaStorePackage())
               add(OpenCVPackage())
               add(ToolClassifierPackage())
+              add(UtilsPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

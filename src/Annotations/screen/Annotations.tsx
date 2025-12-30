@@ -26,6 +26,10 @@ import { useSyncMaps } from '../../hooks/useSyncMaps';
 
 import ToolClassifierView from '../../Validation/components/ToolClassifierView'
 import ToolCandidateView from '../../Validation/components/ToolCandidateView'
+import ToolBatchExtractorView from '../../Validation/components/ToolBatchCandidateView';
+
+import { useVideoCapture } from '../../VideoCapture/Index';
+import RNFS from 'react-native-fs';
 
 interface AnnotationsProps {
   route: RouteProp<any, any>; 
@@ -47,6 +51,8 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
   const { removeAllSyncEntry } = useSync();
+
+  const { resetAllVideoCaptures } = useVideoCapture();
 
   const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
   const [showServerSettings, setShowServerSettings] = useState(false);
@@ -140,11 +146,18 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   // Prompts you to attach a video from the VideoGallery screen
   const handleAttachVideo = (leaf: LeafAnnotation) => {
     setSelectedLeafAnnotation(leaf);
-    navigation.navigate('VideoGallery')
+    navigation.navigate({
+      name: 'VideoGallery',
+      merge: true,
+    });
   };
   
   // Upon video selection, attaches the video to the annotation
   const handleVideoSelect = (videoPath: string) => {
+    if (!selectedLeafAnnotation) {
+      console.warn('No selected leaf annotation when attaching video');
+      return;
+    }
     const leafId = selectedLeafAnnotation.id;
     attachVideo(setLeafAnnotations, leafId, videoPath);
     setSelectedVideoPath(videoPath);
@@ -158,6 +171,17 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       [
         { text: "Cancel", style: "cancel" },
         { text: "Yes", style: "destructive", onPress: () => removeAllSyncEntry() }
+      ]
+    );
+  };
+
+  const handleResetCaptures = () => {
+    Alert.alert(
+      "Confirm Reset",
+      "Are you sure you want to delete all validation captures?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Yes", style: "destructive", onPress: () => resetAllVideoCaptures() }
       ]
     );
   };
@@ -191,6 +215,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     if (route.params?.selectedVideo) {
       handleVideoSelect(route.params.selectedVideo);
     }
+    navigation.setParams({ selectedVideo: undefined });
   }, [route.params?.selectedVideo]);
 
   const leafCallbacks : LeafCallbacks = {
@@ -238,7 +263,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
       {/* Reset Buttons */}
       <View style={{ flexDirection: 'row' }}>
-        {/* Reset Entries */}
+        {/* Reset Entries /}
         <TouchableOpacity
           style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
           onPress={handleResetClient}
@@ -246,14 +271,24 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
           <Text style={{ color: 'white' }}>Reset Entries</Text>
         </TouchableOpacity>
 
-        {/* Reset Server */}
+        {/* Reset Server /}
         <TouchableOpacity
           style={{ backgroundColor: '#FF9800', padding: 8, borderRadius: 6 }}
           onPress={handleResetServer}
         >
           <Text style={{ color: 'white' }}>Reset Server</Text>
         </TouchableOpacity>
+        
+        {/* Reset Captures */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
+          onPress={handleResetCaptures}
+        >
+          <Text style={{ color: 'white' }}>Reset Captures</Text>
+        </TouchableOpacity>
+
       </View>
+      {/**/}
 
       {/* Server IP Input */}
       <View>
@@ -292,9 +327,9 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         </View>
       )}
 
-      {selectedVideoPath && (
+      {true && (
         <View style={{ marginVertical: 16, borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}>
-          <ToolCandidateView videoPath={selectedVideoPath} />
+          <ToolBatchExtractorView folderPath={`${RNFS.ExternalDirectoryPath}/snapmedia/videos`} />
         </View>
       )}
 

@@ -1,4 +1,4 @@
-package com.openmobile.toolclassifier.video
+package com.openmobile.ValidationService.video
 
 import org.opencv.core.*
 import org.opencv.imgproc.Imgproc

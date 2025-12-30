@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { ToolClassifier } from './ToolClassifier';
+import ToolClassifier from './ToolClassifier';
 
 type Props = {
   videoPath: string;

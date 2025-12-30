@@ -1,4 +1,4 @@
-package com.openmobile.toolclassifier.util
+package com.openmobile.ValidationService.ToolValidation
 
 import java.io.File
 

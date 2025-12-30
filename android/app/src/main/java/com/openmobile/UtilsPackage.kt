@@ -1,14 +1,15 @@
-package com.openmobile.toolclassifier
+package com.openmobile
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
+import com.openmobile.MediaStoreModule
+import java.util.*
 
-class ToolClassifierPackage : ReactPackage {
-
+class UtilsPackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-        return listOf(ToolClassifierModule(reactContext))
+        return listOf(UtilsModule(reactContext))
     }
 
     override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {

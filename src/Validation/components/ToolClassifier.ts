@@ -1,4 +1,6 @@
-import { NativeModules } from 'react-native';
+import { NativeEventEmitter, NativeModules } from 'react-native';
+
+const { ToolClassifier } = NativeModules;
 
 type ClassificationResult = {
   label: string;
@@ -10,9 +12,7 @@ type CandidateResult = {
   outputDir: string;
 };
 
-type ToolClassifierType = {
-  extractCandidates(videoPath: string): Promise<CandidateResult>;
-  classifyVideo(videoPath: string): Promise<ClassificationResult>;
-};
+export const ToolClassifierEvents =
+  new NativeEventEmitter(null);
 
-export const ToolClassifier = NativeModules.ToolClassifier as ToolClassifierType;
+export default ToolClassifier;

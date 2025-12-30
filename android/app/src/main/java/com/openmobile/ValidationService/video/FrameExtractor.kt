@@ -1,4 +1,4 @@
-package com.openmobile.toolclassifier.video
+package com.openmobile.ValidationService.video
 
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever

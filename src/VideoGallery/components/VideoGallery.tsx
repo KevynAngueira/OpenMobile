@@ -1,10 +1,13 @@
 // VideoGallery.tsx
 import React, { useEffect, useState } from 'react';
-import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { Modal, View, StyleSheet, Text, TouchableOpacity, FlatList, Alert, SectionList } from 'react-native';
 import Video from 'react-native-video';
 import RNFS from 'react-native-fs';
 import { RouteProp } from '@react-navigation/native';
 import { useLeafAnnotations } from '../../Annotations/context/LeafAnnotationsContext';
+import { useVideoCapture } from '../../VideoCapture/Index';
+import { validateVideoCapture } from '../../VideoCapture/VideoCaptureValidate';
+import VideoItem from '../VideoItem';
 
 interface VideoGalleryProps {
   route: RouteProp<any, any>; 
@@ -13,28 +16,25 @@ interface VideoGalleryProps {
 
 const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
   const { leafAnnotations, setLeafAnnotations, selectedLeafAnnotation, setSelectedLeafAnnotation } = useLeafAnnotations();	
-  const [videos, setVideos] = useState<string[]>([]);  
   const [attachedDropdownOpen, setAttachedDropdownOpen] = useState(false);
   const [unattachedDropdownOpen, setUnattachedDropdownOpen] = useState(true);
-  const [hoveredDelete, setHoveredDelete] = useState<string | null>(null);
   const [deleteAllHovered, setDeleteAllHovered] = useState(false);
+  const { videoCaptures, reconcileDirectory } = useVideoCapture();
 
   // Fetch videos from app's local storage directory when the modal is opened
   useEffect(() => {
-    const videosDirectory = `${RNFS.ExternalDirectoryPath}/snapmedia/videos`;
-
-    RNFS.readDir(videosDirectory)
-      .then((files) => {
-        const videoPaths = files
-          .filter((file) => file.isFile() && file.name.endsWith('.mp4'))
-          .map((file) => file.path);
-
-        setVideos(videoPaths);
-      })
-      .catch((error) => {
-        console.error('Error reading videos directory:', error);
-      });
+    reconcileDirectory();
   }, [])
+
+  useEffect(() => {
+    console.log('[VideoGallery] MOUNT');
+    return () => {
+      console.log('[VideoGallery] UNMOUNT');
+    };
+  }, []);
+  
+
+  const videos = videoCaptures.map(vc => vc.videoPath);
   
   // Split videos into attached and unattached
   const attachedVideos = videos.filter((video) =>
@@ -45,45 +45,44 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     (video) => !leafAnnotations.some((leafAnnotation) => leafAnnotation.video === video)
   );      
 
+  const unattachedPassVideos = unattachedVideos.filter(videoPath => {
+    const vc = videoCaptures.find(v => v.videoPath === videoPath);
+    return vc?.toolValidation === 'pass' && vc?.leafValidation === 'pass';
+  });
+  
+  const unattachedPendingVideos = unattachedVideos.filter(videoPath => {
+    const vc = videoCaptures.find(v => v.videoPath === videoPath);
+    return vc?.toolValidation === 'pending' || vc?.leafValidation === 'pending';
+  });
+  
+  const unattachedFailVideos = unattachedVideos.filter(videoPath => {
+    const vc = videoCaptures.find(v => v.videoPath === videoPath);
+    return vc?.toolValidation === 'fail' || vc?.leafValidation === 'fail';
+  }); 
+
+  const COLORS = {
+    attachable: '#4CAF50',   // green
+    location: '#9E9E9E',         // gray
+    pending: '#FF9800',      // orange
+    fail: '#F44336',      // red
+  };
 
   // Validates video location matches annotation location
   const validateLocation = (videoName: string) => {
-    if (selectedLeafAnnotation.location.latitude === 100 && selectedLeafAnnotation.location.longitude === 100) {
-      if (!(videoName === "corn1" || videoName === "notcorn1")) {
-        console.log("Skipping video selection due to location constraint 1.");
-        return false;
-      }
-    }
-    
-    else if (selectedLeafAnnotation.location.latitude === 200 && selectedLeafAnnotation.location.longitude === 200) {
-      if (!(videoName === "corn2" || videoName === "notcorn2")) {
-        console.log("Skipping video selection due to location constraint 2.");
-        return false;
-      }
-    }
-    
-    else if (!(selectedLeafAnnotation.location.latitude === 500 && selectedLeafAnnotation.location.longitude === 500)) {
-      console.log("Skipping video selection due to location constraint 3.");
-      return false;
-    }
-    
-    else if (videoName === "corn1" || videoName === "notcorn1" || videoName === "corn2" || videoName === "notcorn2") {
-      	console.log("Skipping video selection due to location constraint 4.");
-      	return false;
-    }
     return true;
   }
 
   // Handles callback to Annotations screen
   const handleVideoSelect = (videoPath: string) => { 
   
+    const vc = videoCaptures.find(v => v.videoPath === videoPath);
+    const statusResult = vc ? validateVideoCapture(vc) : null;
+
+    if (!vc || !statusResult?.isValid) {
+      return;
+    }
+
     const videoName = videoPath.split('/').pop()?.split('.')[0]; // Extracts the name without path or extension
-
-    // TODO: Finish location validation service
-    //if (!validateLocation(videoName)){
-    //  return;
-    //}
-
     const annotationUsingVideo = leafAnnotations.find((leafAnnotation) => leafAnnotation.video === videoPath);
 
     if (annotationUsingVideo) {
@@ -103,15 +102,14 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
               setLeafAnnotations(updatedAnnotations);
 
               // Navigate back with the selected video
-              console.log('Video selected:', videoPath);
-              navigation.navigate('Annotations', { selectedVideo: videoPath });
+              navigation.replace('Annotations', { selectedVideo: videoPath });
             },
           },
         ]
       );
     } else {
       console.log('Video selected:', videoPath);
-      navigation.navigate('Annotations', { selectedVideo: videoPath });
+      navigation.replace('Annotations', { selectedVideo: videoPath });
     }
   };
 
@@ -134,13 +132,10 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
           style: 'destructive',
           onPress: () => {
             RNFS.unlink(videoPath)
-              .then(() => {
-                setVideos((prevVideos) => prevVideos.filter((video) => video !== videoPath));
-                console.log('Video deleted:', videoPath);
-              })
-              .catch((error) => {
-                console.error('Error deleting video:', error);
-              });
+            .then(() => {
+              reconcileDirectory(); // re-sync context with filesystem
+              console.log('Video deleted:', videoPath);
+            })
           },
         },
       ]
@@ -159,14 +154,10 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
           style: 'destructive',
           onPress: () => {
             // Delete only unattached videos
-            Promise.all(unattachedVideos.map((videoPath) => RNFS.unlink(videoPath)))
+            Promise.all(unattachedVideos.map(RNFS.unlink))
               .then(() => {
-                setVideos((prevVideos) => prevVideos.filter((video) => !unattachedVideos.includes(video)));
-                console.log('Deleted All Unattached Videos');
+                reconcileDirectory();
               })
-              .catch((error) => {
-                console.error('Error deleting unattached videos:', error);
-              });
           },
         },
       ]
@@ -208,70 +199,21 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     }
   };
 
-  // Renders video item
-  const renderItem = ({ item }: { item: string }) => {
-    const annotationUsingVideo = leafAnnotations.find((leafAnnotation) => leafAnnotation.video === item);
-    const videoName = item.split('/').pop()?.split('.')[0]; // Extracts the name without path or extension
-    let sameLocation = false;
 
-    if (selectedLeafAnnotation?.location?.latitude === 100 && selectedLeafAnnotation?.location?.longitude === 100) {
-      if (videoName === "corn1" || videoName === "notcorn1") {
-        sameLocation = true;
-      }
-    } else if (selectedLeafAnnotation?.location?.latitude === 200 && selectedLeafAnnotation?.location?.longitude === 200) {
-      if (videoName === "corn2" || videoName === "notcorn2") {
-        sameLocation = true;
-      }
-    } else if (selectedLeafAnnotation?.location?.latitude === 500 && selectedLeafAnnotation?.location?.longitude === 500) {
-      if (!(videoName === "corn1" || videoName === "notcorn1" || videoName === "corn2" || videoName === "notcorn2")) {
-        sameLocation = true;
-      }
-    }
-  
-    return (
-      <View style={styles.videoItem}>
-        <Video source={{ uri: item }} style={styles.videoPreview} paused={true} controls />
-	
-
-      {/* Location Tag */}
-      {sameLocation && (
-        <View style={styles.locationTag}>
-          <Text style={styles.tagButtonText}>Attachable</Text>
-        </View>
-      )}
-
-      {/* Tag or Delete Button */}  
-      {annotationUsingVideo ? (
-          <TouchableOpacity
-            onPress={() => handleDeselectVideo(item)}
-            style={styles.tagButton}
-          >
-            <Text style={styles.tagButtonText}>{annotationUsingVideo.name}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPressIn={() => setHoveredDelete(item)}
-            onPressOut={() => setHoveredDelete(null)}
-            onPress={() => handleDeleteVideo(item)}
-            style={[
-              styles.deleteButton,
-              hoveredDelete === item && styles.deleteButtonHovered,
-            ]}
-          >
-            <Text style={styles.deleteButtonText}>X</Text>
-          </TouchableOpacity>
-        )}
-        
-        {/* Select Button */}
-        <TouchableOpacity
-          onPress={() => handleVideoSelect(item)}
-          style={styles.selectButton}
-        >
-          <Text style={styles.selectButtonText}>Select Video</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const unattachedSections = [
+    {
+      title: `Pass (${unattachedPassVideos.length})`,
+      data: unattachedPassVideos,
+    },
+    {
+      title: `Pending (${unattachedPendingVideos.length})`,
+      data: unattachedPendingVideos,
+    },
+    {
+      title: `Fail (${unattachedFailVideos.length})`,
+      data: unattachedFailVideos,
+    },
+  ].filter(section => section.data.length > 0);
 
   // Displays a list of selectable videos and offers the ability to record a new one
   return (
@@ -292,7 +234,7 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
       
-      {/* Attached Videos Section */}
+      {/* Attached Videos */}
       <TouchableOpacity
         onPress={() => toggleDropdown('attached')}
         style={styles.dropdownHeader}
@@ -301,16 +243,25 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
           {attachedDropdownOpen ? '▼' : '▶'} Attached Videos
         </Text>
       </TouchableOpacity>
-      {attachedDropdownOpen && (
-        <FlatList
-          data={attachedVideos}
-          renderItem={renderItem}
+        {attachedDropdownOpen && (
+          <FlatList
+            data={attachedVideos}
+            renderItem={({item})=> (
+              <VideoItem
+              videoPath={item}
+              videoCaptures={videoCaptures}
+              leafAnnotations={leafAnnotations}
+              handleVideoSelect={handleVideoSelect}
+              handleDeselectVideo={handleDeselectVideo}
+              handleDeleteVideo={handleDeleteVideo}
+              />
+            )}
           keyExtractor={(item) => item}
           style={styles.dropdownList}
         />
       )}
 
-      {/* Unattached Videos Section */}
+      {/* Unattached Videos */}
       <TouchableOpacity
         onPress={() => toggleDropdown('unattached')}
         style={styles.dropdownHeader}
@@ -320,10 +271,22 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
         </Text>
       </TouchableOpacity>
       {unattachedDropdownOpen && (
-        <FlatList
-          data={unattachedVideos}
-          renderItem={renderItem}
+        <SectionList
+          sections={unattachedSections}
           keyExtractor={(item) => item}
+          renderItem={({item})=> (
+            <VideoItem
+            videoPath={item}
+            videoCaptures={videoCaptures}
+            leafAnnotations={leafAnnotations}
+            handleVideoSelect={handleVideoSelect}
+            handleDeselectVideo={handleDeselectVideo}
+            handleDeleteVideo={handleDeleteVideo}
+            />
+          )}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.statusHeader}>{title}</Text>
+          )}
           style={styles.dropdownList}
         />
       )}
@@ -378,8 +341,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   dropdownList: {
-    marginVertical: 10,
+    marginVertical: 10
   },
+  statusHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  
   
   // Video styles
   videoItem: {
@@ -445,14 +415,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   
-  // Location Tag styles
-  locationTag: {
+  // Status Tag styles
+  statusTag: {
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: '#4CAF50',
     padding: 5,
     borderRadius: 5,
+    minWidth: 50,
+    alignItems: 'center',
   },
   locationTagText: {
     color: 'white',

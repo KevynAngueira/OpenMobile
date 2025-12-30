@@ -1,9 +1,11 @@
 // CameraScreen.tsx
 import React, { useRef, useState } from 'react';
-import { Text, StyleSheet, View, Button, Modal, TouchableOpacity } from 'react-native';
+import { Text, StyleSheet, View, Button, Modal, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
 import CircleTimer from './CircleTimer';
+import { useVideoCapture } from '../../VideoCapture/Index';
+import { runVideoValidations } from '../../VideoCapture/context/VideoValidationWorker';
 
 const CameraScreen = ({ navigation }) => {
   // Video and Recording
@@ -11,6 +13,8 @@ const CameraScreen = ({ navigation }) => {
   const [videoUri, setVideoUri] = useState<string | null>(null);
   // Select, Save, and Discard Modal
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { addVideoCapture, updateVideoCapture } = useVideoCapture(); 
   //Camera and Device
   const camera = useRef<Camera>(null);
   const devices = useCameraDevices();
@@ -97,13 +101,56 @@ const CameraScreen = ({ navigation }) => {
   };
 
   const handleSelectVideo = async () => {
-    // Pass the video URI to VideoGallery for selection
-    if (videoUri) {
+    if (!videoUri) return;
+    setLoading(true);
+
+    try {
       const savedPath = await saveVideo(videoUri);
-      console.log('Video selected from Camera:', savedPath)
-      navigation.navigate('VideoGallery', { selectedVideo: savedPath }); 
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      navigation.navigate('VideoGallery');
+      setLoading(false);
+      setModalVisible(false);
+
+      return;
+
+
+      // Automatically create VideoCapture object
+      const newCapture = {
+        videoPath: savedPath,
+        toolValidation: 'pending',
+        leafValidation: 'pending',
+        createdAt: Date.now(),
+      };
+      addVideoCapture(savedPath);
+
+      // Run validation
+      const result = await runVideoValidations(savedPath); 
+
+      // Update the capture object
+      updateVideoCapture(savedPath, {
+        toolValidation: result.tool,
+        leafValidation: result.leaf,
+      });
+
+      if (result.tool === 'pass' && result.leaf === 'pass') {
+        // attachable
+        navigation.navigate('VideoGallery', { selectedVideo: savedPath });
+      } else {
+        Alert.alert(
+          'Video Validation Failed',
+          'This video did not pass validation and cannot be attached.',
+          [{ text: 'OK', onPress: () => navigation.navigate('VideoGallery') }]
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to process video.');
+    } finally {
+      setLoading(false);
+      setModalVisible(false);
     }
-    setModalVisible(false);  // Close the modal after selection
   };
 
   const handleSaveVideo = async () => {
@@ -145,20 +192,29 @@ const CameraScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Modal for options after video recording */}
+      {/* Modal */}
       <Modal visible={modalVisible} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose an option</Text>
-            <TouchableOpacity style={styles.modalButton} onPress={handleSelectVideo}>
-              <Text style={styles.modalButtonText}>Select</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButton} onPress={handleSaveVideo}>
-              <Text style={styles.modalButtonText}>Save for Later</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.discardModalButton} onPress={handleDiscardVideo}>
-              <Text style={styles.discardModalButtonText}>Discard</Text>
-            </TouchableOpacity>
+            {loading ? (
+              <View style={{ alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#1E3A5F" />
+                <Text style={{ marginTop: 10 }}>Waiting for validation...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>Choose an option</Text>
+                <TouchableOpacity style={styles.brokenmodalButton} onPress={handleSelectVideo}>
+                  <Text style={styles.modalButtonText}>Select</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalButton} onPress={handleSaveVideo}>
+                  <Text style={styles.modalButtonText}>Save for Later</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.discardModalButton} onPress={handleDiscardVideo}>
+                  <Text style={styles.discardModalButtonText}>Discard</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -202,6 +258,13 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     backgroundColor: '#1E3A5F',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    width: '100%',
+  },
+  brokenmodalButton: {
+    backgroundColor: '#9E9E9E',
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
