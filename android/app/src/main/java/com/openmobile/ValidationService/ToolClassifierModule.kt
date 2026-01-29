@@ -25,7 +25,9 @@ class ToolClassifierModule(reactContext: ReactApplicationContext) :
     private val executor = Executors.newSingleThreadExecutor()
 
     private val pcaMean = PCALoader.loadMean(reactContext)
-    private val pcaComponents = PCALoader.loadComponents(reactContext, (144 * 64), 5)
+    private val pcaComponents = PCALoader.loadComponents(reactContext, 7456, 5)
+    //private val pcaMean = PCALoader.load1D(reactContext)
+    //private val pcaComponents = PCALoader.load2D(reactContext)
     private val classifier = VideoClassifier(reactContext, pcaMean, pcaComponents)
 
     override fun getName(): String = NAME

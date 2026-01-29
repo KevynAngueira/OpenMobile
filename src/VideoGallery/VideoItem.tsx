@@ -50,6 +50,9 @@ const VideoItem: React.FC<VideoItemProps> = ({
       statusTag = { text: 'Fail', color: COLORS.fail };
     }
 
+    const videoName = videoPath.split('/').pop() ?? videoPath;
+
+
     return (
       <View style={styles.videoItem}>
         
@@ -58,9 +61,15 @@ const VideoItem: React.FC<VideoItemProps> = ({
         */}
 
         {playing ? (
-          <Video source={{ uri: videoPath }} style={styles.videoPreview} controls />
+          <Video
+            source={{ uri: videoPath }}
+            style={styles.videoPreview}
+            controls
+          />
         ) : (
-          <View style={styles.videoPreview} /> // placeholder
+          <View style={[styles.videoPreview, styles.videoPlaceholder]}>
+            <Text style={styles.videoNameText}>{videoName}</Text>
+          </View>
         )}
 
         <TouchableOpacity onPress={() => setPlaying(!playing)} style={styles.selectButton}>
@@ -186,6 +195,20 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
   },
+
+  // Video Styles
+  videoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+  },
+  
+  videoNameText: {
+    color: '#555',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  }
 });
 
 export default VideoItem;

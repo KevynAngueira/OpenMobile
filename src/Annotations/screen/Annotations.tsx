@@ -197,7 +197,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
           style: "destructive", 
           onPress: async () => {
             try {
-              const response = await fetch(`${serverURL}/reset`);
+              const response = await fetch(`${serverURL}/reset`, {method: "POST"});
               const data = await response.json();
               Alert.alert("Server Reset", data.message || "Server cache reset.");
             } catch (err) {
@@ -263,7 +263,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
       {/* Reset Buttons */}
       <View style={{ flexDirection: 'row' }}>
-        {/* Reset Entries /}
+        {/* Reset Entries */}
         <TouchableOpacity
           style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
           onPress={handleResetClient}
@@ -271,7 +271,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
           <Text style={{ color: 'white' }}>Reset Entries</Text>
         </TouchableOpacity>
 
-        {/* Reset Server /}
+        {/* Reset Server */}
         <TouchableOpacity
           style={{ backgroundColor: '#FF9800', padding: 8, borderRadius: 6 }}
           onPress={handleResetServer}

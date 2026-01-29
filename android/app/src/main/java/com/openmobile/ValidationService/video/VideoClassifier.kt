@@ -32,7 +32,7 @@ class VideoClassifier(
     private val pcaComponents: Array<FloatArray>,
     private val targetSize: Size = Size(144.0, 64.0),
     private val k: Int = 5,
-    private val threshold: Double = 442.05484,
+    private val threshold: Double = 500.0,
     private val majorityRatio: Double = 0.6,
     private val labLower: Scalar = Scalar(55.0, 142.0, 100.0),
     private val labUpper: Scalar = Scalar(255.0, 255.0, 136.0)

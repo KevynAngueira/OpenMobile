@@ -15,14 +15,32 @@ object PCAUtils {
 
         val resized = Mat()
         Imgproc.resize(gray, resized, size)
+        
+        val flatMask = PCAMask.buildWindowMask(size)
 
-        val flat = FloatArray(resized.rows() * resized.cols())
+        val flat = flattenWithoutWindow(resized, flatMask)
+        
+        return flat
+    }
+
+    private fun flattenWithoutWindow(
+        resized: Mat,
+        flatMask: BooleanArray
+    ): FloatArray {
+
+        val out = FloatArray(flatMask.count { it })
+        var outIdx = 0
+        var flatIdx = 0
+
         for (r in 0 until resized.rows()) {
             for (c in 0 until resized.cols()) {
-                flat[r * resized.cols() + c] = resized.get(r, c)[0].toFloat()
+                if (flatMask[flatIdx]) {
+                    out[outIdx++] = resized.get(r, c)[0].toFloat()
+                }
+                flatIdx++
             }
         }
-        return flat
+        return out
     }
 
     fun reconstruct(input: FloatArray, mean: FloatArray, comp: Array<FloatArray>, k: Int): FloatArray {
