@@ -1,4 +1,6 @@
-export const isLeafDetailsValid = (length, leafNumber, leafWidths) => {
+import { LeafAnnotation } from "../../types/AnnotationTypes";
+
+export const isLeafDetailsValid = (length: string, leafNumber: string, leafWidths: string[]) => {
     if (
         length == null ||
         leafNumber == null ||
@@ -13,4 +15,14 @@ export const isLeafDetailsValid = (length, leafNumber, leafWidths) => {
     const validWidths = leafWidths.every((w) => w !== '' && !isNaN(parseFloat(w)));
     return validLength && validLeafNumber && validWidths;
 };
+
+export const isLeafAnnotationComplete = (annotation: LeafAnnotation) => {    
+    const validVideo = !!annotation.video;
+    const validLeaf = isLeafDetailsValid(
+      annotation.length,
+      annotation.leafNumber,
+      annotation.leafWidths
+    );
+    return validVideo && validLeaf;
+  };
   

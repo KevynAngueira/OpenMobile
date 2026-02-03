@@ -1,26 +1,33 @@
 import React from 'react';
 import { Text } from 'react-native';
 import Ionicons from '@react-native-vector-icons/material-icons';
+import { LeafAnnotation } from '../../types/AnnotationTypes';
 import { SyncEntry } from '../../types/SyncTypes';
+import {
+  getLeafSyncUIState,
+  LeafSyncUIConfig
+} from '../utils/LeafSyncUIState';
 
-export const LeafStatusIndicator = ({ entry }: {
-  entry: SyncEntry;
-}) => {
+export const LeafStatusIndicator = ({ annotation, entry }: { annotation: LeafAnnotation, entry?: SyncEntry }) => {
+  const uiState = getLeafSyncUIState(annotation, entry);
+  const config = LeafSyncUIConfig[uiState];
 
-  const status = entry?.inferenceStatus;
-  const value = entry?.inferenceResponse?.results?.defoliation ?? 0
+  if (uiState === 'completed') {
+    const value =
+      entry?.inferenceResponse?.results?.defoliation ?? 0;
 
-  if (status === 'completed') {
-    return <Text style={{ fontSize: 16, color: 'green' }}>{Math.round(value ?? 0)}%</Text>;
+    return (
+      <Text style={{ fontSize: 16, color: config.color }}>
+        {Math.round(value)}%
+      </Text>
+    );
   }
 
-  if (status === 'running') {
-    return <Ionicons name="sync" size={20} color="dodgerblue" />;
-  }
-
-  if (status === 'waiting' || status === 'failed') {
-    return <Ionicons name="close" size={20} color="red" />;
-  }
-
-  return <Ionicons name="circle" size={14} color="orange" />;
+  return (
+    <Ionicons
+      name={config.icon!}
+      size={18}
+      color={config.color}
+    />
+  );
 };

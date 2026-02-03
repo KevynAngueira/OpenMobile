@@ -5,6 +5,7 @@ import Ionicons from '@react-native-vector-icons/material-icons';
 import Video from 'react-native-video';
 
 import { LeafStatusIndicator } from './LeafStatusIndicator';
+import { getLeafSyncUIState, LeafSyncUIConfig } from '../utils/LeafSyncUIState';
 import { LeafAnnotation, LeafCallbacks } from '../../types/AnnotationTypes';
 
 interface LeafAnnotationListProps {
@@ -38,6 +39,8 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
         .map((leaf) => {
 
         const syncEntry = leafCallbacks.getSyncEntry(leaf.video);
+        const uiState = getLeafSyncUIState(leaf, syncEntry);
+        const config = LeafSyncUIConfig[uiState];
         
         return (
           <View key={leaf.id} style={styles.annotationContainer}>
@@ -47,6 +50,7 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
             >
               <Text style={styles.annotationTitle}>{leaf.name}</Text>
               <LeafStatusIndicator
+                  annotation={leaf}
                   entry={syncEntry}
                 />
             </TouchableOpacity>
@@ -154,15 +158,14 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
                     <View>
                       <View style={styles.tabContent}>
                         <Text style={styles.tabTitle}>Results</Text>
-                        {syncEntry ? (
-                          <View style={styles.placeholderContainer}>
+                        <View style={styles.placeholderContainer}>
+                          <Text style={styles.placeholderText}>
+                            {config.label}
+                          </Text>
+                          {config.showResults && syncEntry?.inferenceResponse && (
                             <Text style={styles.resultValue}>{JSON.stringify(syncEntry.inferenceResponse)}</Text>
-                          </View>
-                        ): (
-                          <View style={styles.placeholderContainer}>
-                            <Text style={styles.placeholderText}>Results Unavailable</Text>
-                          </View>
-                        )}
+                          )}
+                        </View>
                       </View>
 
                       <TouchableOpacity
