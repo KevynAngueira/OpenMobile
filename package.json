@@ -2,6 +2,11 @@
   "name": "openmobile",
   "version": "1.0.0",
   "private": true,
+  "react-native": {
+    "codegenConfig": {
+      "libraries": []
+    }
+  },
   "scripts": {
     "start": "react-native start",
     "android": "react-native run-android",
