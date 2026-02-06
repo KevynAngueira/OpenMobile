@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "97725468739",
+    "project_id": "leafscan-5b66d",
+    "storage_bucket": "leafscan-5b66d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97725468739:android:c0639bc2f3474609a784f6",
+        "android_client_info": {
+          "package_name": "com.openmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZhoLw_VTk3cLpWuv73uIuQ_mSjq0gYnk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
