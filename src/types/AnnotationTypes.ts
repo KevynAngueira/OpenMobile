@@ -25,7 +25,17 @@ export interface PlantAnnotation {
   info: string;
   location: Location | null;
 
+  parentField: string;
   childLeaves: string[];
+}
+
+export interface FieldAnnotation {
+  id: string | null;
+  name: string;
+  info: string;
+  location: Location | null;
+
+  childPlants: string[];
 }
 
 export interface LeafCallbacks {

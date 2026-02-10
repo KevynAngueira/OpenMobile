@@ -6,6 +6,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { requestPermissions } from './src/utils/PermissionsHelper';
 import { LeafAnnotationsProvider } from './src/Annotations/context/LeafAnnotationsContext';
 import { PlantAnnotationsProvider } from './src/Annotations/context/PlantAnnotationsContext';
+import { FieldAnnotationsProvider } from './src/Annotations/context/FieldAnnotationsContext';
 import { SyncProvider } from './src/Sync/context/SyncContext';
 import { VideoCaptureProvider } from './src/VideoCapture/Index';
 
@@ -21,21 +22,23 @@ const App = () => {
   }, []);
 
   return (
-    <PlantAnnotationsProvider>
-      <LeafAnnotationsProvider>
-        <SyncProvider>
-          <VideoCaptureProvider>
-            <NavigationContainer>
-              <Stack.Navigator initialRouteName="Annotations">
-                <Stack.Screen name="Annotations" component={Annotations} />
-                <Stack.Screen name="VideoGallery" component={VideoGallery} />
-                <Stack.Screen name="CameraScreen" component={CameraScreen} />
-              </Stack.Navigator>
-            </NavigationContainer>
-          </VideoCaptureProvider>
-        </SyncProvider>
-      </LeafAnnotationsProvider>
-    </PlantAnnotationsProvider>
+    <FieldAnnotationsProvider>
+      <PlantAnnotationsProvider>
+        <LeafAnnotationsProvider>
+          <SyncProvider>
+            <VideoCaptureProvider>
+              <NavigationContainer>
+                <Stack.Navigator initialRouteName="Annotations">
+                  <Stack.Screen name="Annotations" component={Annotations} />
+                  <Stack.Screen name="VideoGallery" component={VideoGallery} />
+                  <Stack.Screen name="CameraScreen" component={CameraScreen} />
+                </Stack.Navigator>
+              </NavigationContainer>
+            </VideoCaptureProvider>
+          </SyncProvider>
+        </LeafAnnotationsProvider>
+      </PlantAnnotationsProvider>
+    </FieldAnnotationsProvider>
   );
 };
 

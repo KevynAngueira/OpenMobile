@@ -4,7 +4,7 @@ import { Alert, View, Button, StyleSheet, Text, TouchableOpacity} from 'react-na
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
 import { TextInput } from 'react-native-gesture-handler';
 
-import { LeafAnnotation, PlantAnnotation, LeafCallbacks, PlantCallbacks } from '../../types/AnnotationTypes';
+import { LeafAnnotation, PlantAnnotation, FieldAnnotation, LeafCallbacks, PlantCallbacks } from '../../types/AnnotationTypes';
 
 import { useLeafAnnotations } from '../context/LeafAnnotationsContext';
 import LeafAnnotationList from '../components/LeafAnnotationList';
@@ -14,8 +14,12 @@ import { usePlantAnnotations } from '../context/PlantAnnotationsContext';
 import PlantAnnotationList from '../components/PlantAnnotationList';
 import PlantAnnotationModal from '../components/PlantAnnotationModal';
 
+import { useFieldAnnotations } from '../context/FieldAnnotationsContext';
+import FieldAnnotationModal from '../components/FieldAnnotationModal';
+
 import { createLeaf, updateLeaf, deleteLeaf, attachVideo, setParentPlant } from '../services/LeafHandler';
 import { createPlant, updatePlant, deletePlant, attachChildLeaf, removeChildLeaf } from '../services/PlantHandler';
+import { createField, updateField, deleteField, attachChildPlant, removeChildPlant } from '../services/FieldHandler';
 
 import { useSync } from '../../Sync/context/SyncContext';
 import useHandleSync from '../services/AnnotationActions';
@@ -39,9 +43,11 @@ interface AnnotationsProps {
 const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { leafAnnotations, setLeafAnnotations, selectedLeafAnnotation, setSelectedLeafAnnotation } = useLeafAnnotations();
   const { plantAnnotations, setPlantAnnotations, selectedPlantAnnotation, setSelectedPlantAnnotation } = usePlantAnnotations();
+  const { fieldAnnotations, setFieldAnnotations, selectedFieldAnnotation, setSelectedFieldAnnotation } = useFieldAnnotations();
 
   const [leafModalVisible, setLeafModalVisible] = useState(false);
   const [plantModalVisible, setPlantModalVisible] = useState(false);
+  const [fieldModalVisible, setFieldModalVisible] = useState(false);
 
   const { syncEntries } = useSync();
 
@@ -64,7 +70,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   navigation = useNavigation();
 
 
-  // Creates an annotation
+  // Creates a leaf annotation
   const handleCreateLeafAnnotation = (
    newLeaf: LeafAnnotation,
    plantId?: string
@@ -89,7 +95,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     return leafId;
   };
 
-  // Edits an annotation
+  // Edits a leaf annotation
   const handleEditLeafAnnotation = (leaf: LeafAnnotation | null, plantId?: string) => {
     if (plantId) {
       const plant = plantAnnotations.find((p) => p.id === plantId) || null;
@@ -102,7 +108,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     setLeafModalVisible(true);
   }
 
-  // Deletes an annotation
+  // Deletes a leaf annotation
   const handleDeleteLeafAnnotation = (leaf: LeafAnnotation) => {
     const parentPlant = leaf.parentPlant;
     deleteLeaf(setLeafAnnotations, leaf.id, () => {
@@ -112,7 +118,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     });  
   };
 
-  // Creates an annotation
+  // Creates a plant annotation
   const handleCreatePlantAnnotation = (
     newPlant: PlantAnnotation  
   ): string => {
@@ -127,18 +133,49 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     return plantId;
   };
 
-  // Edits an annotation
+  // Edits a plant annotation
   const handleEditPlantAnnotation = (plant: PlantAnnotation | null) => {
     setSelectedPlantAnnotation(plant);
     setPlantModalVisible(true);
   }
 
-  // Deletes an annotation
+  // Deletes a plant annotation
   const handleDeletePlantAnnotation = (plant: PlantAnnotation) => {
     const childLeaves = plant.childLeaves;
     deletePlant(setPlantAnnotations, plant.id, () => {
       childLeaves.forEach(leafId => {
         deleteLeaf(setLeafAnnotations, leafId);
+      });
+    });
+  };
+
+  // Creates a field annotation
+  const handleCreateFieldAnnotation = (
+    newField: FieldAnnotation  
+  ): string => {
+    
+    let fieldId = newField.id
+    if (fieldId) {
+      updateField(setFieldAnnotations, newField);
+    } else {
+      fieldId = createField(setFieldAnnotations, newField);
+    }
+    setFieldModalVisible(false);
+    return fieldId;
+  };
+
+  // Edits a plant annotation
+  const handleEditFieldAnnotation = (field: FieldAnnotation | null) => {
+    setSelectedFieldAnnotation(field);
+    setFieldModalVisible(true);
+  }
+
+  // Deletes a plant annotation
+  const handleDeleteFieldAnnotation = (field: FieldAnnotation) => {
+    const childPlants = field.childPlants;
+    deleteField(setFieldAnnotations, field.id, () => {
+      childPlants.forEach(plantId => {
+        deletePlant(setPlantAnnotations, plantId);
       });
     });
   };
