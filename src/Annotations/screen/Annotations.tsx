@@ -1,6 +1,7 @@
 // Annotations.tsx
 import React, { useState, useEffect } from 'react';
-import { Alert, View, Button, StyleSheet, Text, TouchableOpacity} from 'react-native';
+import { Alert, View, Button, StyleSheet, Text, TouchableOpacity, ScrollView, Modal} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
 import { TextInput } from 'react-native-gesture-handler';
 
@@ -22,6 +23,7 @@ import { createLeaf, updateLeaf, deleteLeaf, attachVideo, setParentPlant } from 
 import { createPlant, updatePlant, deletePlant, attachChildLeaf, removeChildLeaf, setParentField } from '../services/PlantHandler';
 import { createField, updateField, deleteField, attachChildPlant, removeChildPlant } from '../services/FieldHandler';
 
+import DevConfigModal from '../components/DevConfigModal';
 import { useSync } from '../../Sync/context/SyncContext';
 import useHandleSync from '../services/AnnotationActions';
 import { useServerConfig } from '../../hooks/useServerConfig';
@@ -46,32 +48,31 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { plantAnnotations, setPlantAnnotations, selectedPlantAnnotation, setSelectedPlantAnnotation } = usePlantAnnotations();
   const { fieldAnnotations, setFieldAnnotations, selectedFieldAnnotation, setSelectedFieldAnnotation } = useFieldAnnotations();
 
+  const { listToLeaves, listToPlants, getHierarchyName } = useAnnotationMaps(fieldAnnotations, plantAnnotations, leafAnnotations);
+
   const [leafModalVisible, setLeafModalVisible] = useState(false);
   const [plantModalVisible, setPlantModalVisible] = useState(false);
   const [fieldModalVisible, setFieldModalVisible] = useState(false);
+  
 
   const { syncEntries } = useSync();
-
-  const { plantIdToName, leafIdToName, listToLeaves, listToPlants, getHierarchyName } = useAnnotationMaps(fieldAnnotations, plantAnnotations, leafAnnotations);
   const { videoToSync } = useSyncMaps(syncEntries);
 
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
   const { removeAllSyncEntry } = useSync();
 
+  const [configVisible, setConfigVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<'field' | 'plant' | 'leaf'>('field');
   const { resetAllVideoCaptures } = useVideoCapture();
-
   const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
   const [showServerSettings, setShowServerSettings] = useState(false);
-
-  const [viewMode, setViewMode] = useState<'field' | 'plant' | 'leaf'>('field');
 
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
 
   const plantsForSelectedField = React.useMemo(() => {
     if (!selectedFieldAnnotation) return [];
-  
-    // Find the fresh field from context
+
     const freshField = fieldAnnotations.find(f => f.id === selectedFieldAnnotation.id);
     if (!freshField) return [];
   
@@ -322,205 +323,198 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Annotations</Text>
+    <SafeAreaView style={styles.screen}>
 
-      {/* Toggle Switch: Plant / Leaf view */}
-      <View style={styles.toggleContainer}>
-        <Text style={styles.toggleLabel}>View Mode:</Text>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            viewMode === 'field' ? styles.toggleButtonActive : {}
-          ]}
-          onPress={() => setViewMode('field')}
-        >
-          <Text style={styles.toggleButtonText}>Field</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            viewMode === 'plant' ? styles.toggleButtonActive : {}
-          ]}
-          onPress={() => setViewMode('plant')}
-        >
-          <Text style={styles.toggleButtonText}>Plant</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            viewMode === 'leaf' ? styles.toggleButtonActive : {}
-          ]}
-          onPress={() => setViewMode('leaf')}
-        >
-          <Text style={styles.toggleButtonText}>Leaf</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Static Header Container */}
+      <View style={styles.topContainer}>
+        {/* Toggle Switch: Plant / Leaf view */}
+        <View style={styles.toggleContainer}>
+          {/* Left side (view controls) */}
+          <View style={styles.toggleLeft}>
+            <Text style={styles.toggleLabel}>View Mode:</Text>
 
-      {/* Reset Buttons */}
-      <View style={{ flexDirection: 'row' }}>
-        {/* Reset Entries */}
-        <TouchableOpacity
-          style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
-          onPress={handleResetClient}
-        >
-          <Text style={{ color: 'white' }}>Reset Entries</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                viewMode === 'field' && styles.toggleButtonActive
+              ]}
+              onPress={() => setViewMode('field')}
+            >
+              <Text style={styles.toggleButtonText}>Field</Text>
+            </TouchableOpacity>
 
-        {/* Reset Server */}
-        <TouchableOpacity
-          style={{ backgroundColor: '#FF9800', padding: 8, borderRadius: 6 }}
-          onPress={handleResetServer}
-        >
-          <Text style={{ color: 'white' }}>Reset Server</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                viewMode === 'plant' && styles.toggleButtonActive
+              ]}
+              onPress={() => setViewMode('plant')}
+            >
+              <Text style={styles.toggleButtonText}>Plant</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                viewMode === 'leaf' && styles.toggleButtonActive
+              ]}
+              onPress={() => setViewMode('leaf')}
+            >
+              <Text style={styles.toggleButtonText}>Leaf</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Right side (gear icon) */}
+          <TouchableOpacity
+            onPress={() => setConfigVisible(true)}
+            style={styles.gearButton}
+          >
+            <Text style={{ fontSize: 22 }}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
         
-        {/* Reset Captures */}
-        <TouchableOpacity
-          style={{ backgroundColor: '#f44336', padding: 8, borderRadius: 6, marginRight: 5 }}
-          onPress={handleResetCaptures}
-        >
-          <Text style={{ color: 'white' }}>Reset Captures</Text>
-        </TouchableOpacity>
-
-      </View>
-      {/**/}
-
-      {/* Server IP Input */}
-      <View>
-        <Button
-          title={showServerSettings ? 'Hide Server Settings' : 'Enter Server Settings'}
-          onPress={() => setShowServerSettings(!showServerSettings)}
-          color='#4CAF50'
+        <DevConfigModal
+          visible={configVisible}
+          onClose={() => setConfigVisible(false)}
+          handleResetClient={handleResetClient}
+          handleResetServer={handleResetServer}
+          handleResetCaptures={handleResetCaptures}
+          showServerSettings={showServerSettings}
+          setShowServerSettings={setShowServerSettings}
+          ip={ip}
+          port={port}
+          setIP={setIP}
+          setPort={setPort}
+          saveServerSettings={saveServerSettings}
+          extractorComponent={
+            <ToolBatchExtractorView
+              folderPath={`${RNFS.ExternalDirectoryPath}/snapmedia/videos`}
+            />
+          }
         />
       </View>
 
-      { showServerSettings && (
-        <View style={{ marginTop: 10, padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 8 }}>
-          <Text style={{ fontWeight: "bold", marginBottom: 5 }}>Server Settings</Text>
+      {/* Scrollable Body Container */}
+      <ScrollView 
+        style={styles.scroll} 
+        contentContainerStyle={styles.scrollContent}
+        showsHorizontalScrollIndicator={true}
+      >
 
-          <TextInput
-            style={{ borderWidth: 1, padding: 8, marginBottom: 5, borderRadius: 6 }}
-            placeholder="IP (e.g. 192.168.1.148)"
-            value={ip}
-            onChangeText={setIP}
-          />
+        {/* Modal to create leaf annotations */}
+        <LeafAnnotationModal
+          visible={leafModalVisible}
+          onClose={() => setLeafModalVisible(false)}
+          onCreateAnnotation={handleCreateLeafAnnotation}
+          selectedLeaf={selectedLeafAnnotation}
+          selectedPlant={selectedPlantAnnotation}
+        />
 
-          <TextInput
-            style={{ borderWidth: 1, padding: 8, marginBottom: 5, borderRadius: 6 }}
-            placeholder="Port (e.g. 5000)"
-            value={port}
-            onChangeText={setPort}
-            keyboardType="numeric"
-          />
+        {/* Modal to create plant annotations */}
+        <PlantAnnotationModal
+          visible={plantModalVisible}
+          onClose={() => setPlantModalVisible(false)}
+          onCreateAnnotation={handleCreatePlantAnnotation}
+          selectedPlant={selectedPlantAnnotation}
+          selectedField={selectedFieldAnnotation}
+        />      
 
-          <TouchableOpacity
-            style={{ backgroundColor: "#4CAF50", padding: 10, borderRadius: 6 }}
-            onPress={() => saveServerSettings(ip, port)}
-          >
-            <Text style={{ color: "white", textAlign: "center" }}>Save</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        {/* Modal to create field annotations */}
+        <FieldAnnotationModal
+          visible={fieldModalVisible}
+          onClose={() => setFieldModalVisible(false)}
+          onCreateAnnotation={handleCreateFieldAnnotation}
+          onDeleteAnnotation={handleDeleteFieldAnnotation}
+          selectedField={selectedFieldAnnotation}
+        />
 
-      {true && (
-        <View style={{ marginVertical: 16, borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}>
-          <ToolBatchExtractorView folderPath={`${RNFS.ExternalDirectoryPath}/snapmedia/videos`} />
-        </View>
-      )}
+        {/* Conditional Rendering */}
+        {viewMode === 'field' && (
+          <View>
+            <FieldSelector 
+              selectedField={selectedFieldAnnotation} 
+              fieldAnnotations={fieldAnnotations} 
+              fieldCallbacks={fieldCallbacks}
+            />
 
-      {/* Modal to create leaf annotations */}
-      <LeafAnnotationModal
-        visible={leafModalVisible}
-        onClose={() => setLeafModalVisible(false)}
-        onCreateAnnotation={handleCreateLeafAnnotation}
-        selectedLeaf={selectedLeafAnnotation}
-        selectedPlant={selectedPlantAnnotation}
-      />
+            <PlantAnnotationList
+              plantAnnotations={plantsForSelectedField}
+              plantCallbacks={plantCallbacks}
+              leafAnnotations={leafAnnotations}
+              leafCallbacks={leafCallbacks}
+            />
+          </View>
+        )}
 
-      {/* Modal to create plant annotations */}
-      <PlantAnnotationModal
-        visible={plantModalVisible}
-        onClose={() => setPlantModalVisible(false)}
-        onCreateAnnotation={handleCreatePlantAnnotation}
-        selectedPlant={selectedPlantAnnotation}
-        selectedField={selectedFieldAnnotation}
-      />      
-
-      {/* Modal to create field annotations */}
-      <FieldAnnotationModal
-        visible={fieldModalVisible}
-        onClose={() => setFieldModalVisible(false)}
-        onCreateAnnotation={handleCreateFieldAnnotation}
-        onDeleteAnnotation={handleDeleteFieldAnnotation}
-        selectedField={selectedFieldAnnotation}
-      />
-
-      {/* Conditional Rendering */}
-      {viewMode === 'field' && (
-        <View>
-          <FieldSelector 
-            selectedField={selectedFieldAnnotation} 
-            fieldAnnotations={fieldAnnotations} 
-            fieldCallbacks={fieldCallbacks}
-          />
-
+        {viewMode === 'plant' && (
           <PlantAnnotationList
-            plantAnnotations={plantsForSelectedField}
+            plantAnnotations={plantAnnotations}
             plantCallbacks={plantCallbacks}
             leafAnnotations={leafAnnotations}
             leafCallbacks={leafCallbacks}
           />
-        </View>
-      )}
+        )}
 
-      {viewMode === 'plant' && (
-        <PlantAnnotationList
-          plantAnnotations={plantAnnotations}
-          plantCallbacks={plantCallbacks}
-          leafAnnotations={leafAnnotations}
-          leafCallbacks={leafCallbacks}
-        />
-      )}
+        {viewMode === 'leaf' && (
+          <LeafAnnotationList
+            plantId="All"
+            leafAnnotations={leafAnnotations}
+            leafCallbacks={{
+              ...leafCallbacks,
+              onEditButton: () => {},
+              onAttachVideo: () => {},
+              syncEntries: leafCallbacks.syncEntries
+            }}
+          />
+        )}
+      </ScrollView>
 
-      {viewMode === 'leaf' && (
-        <LeafAnnotationList
-          plantId="All"
-          leafAnnotations={leafAnnotations}
-          leafCallbacks={{
-            ...leafCallbacks,
-            onEditButton: () => {},
-            onAttachVideo: () => {},
-            syncEntries: leafCallbacks.syncEntries
-          }}
-        />
-      )}
+      {/* Static Footer Container */}
+      <View style={styles.bottomContainer}>
+        {/* Sync Results Display */}
+        {syncResult && (
+          <View style={styles.syncResultContainer}>
+            <Text style={styles.syncResultText}>{syncResult}</Text>
+          </View>
+        )}
 
-      {/* Sync Results Display */}
-      {syncResult && (
-        <View style={styles.syncResultContainer}>
-          <Text style={styles.syncResultText}>{syncResult}</Text>
-        </View>
-      )}
-
-      {/* Sync Button */}
-      <TouchableOpacity
-        style={styles.syncButton}
-        onPress={() => handleSync(serverURL, leafAnnotations, setSyncResult)}
-      >
-        <Text style={styles.syncButtonText}>Sync</Text>
-      </TouchableOpacity>
+        {/* Sync Button */}
+        <TouchableOpacity
+          style={styles.syncButton}
+          onPress={() => handleSync(serverURL, leafAnnotations, setSyncResult)}
+        >
+          <Text style={styles.syncButtonText}>Sync</Text>
+        </TouchableOpacity>
+      </View>
       
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // Main Container + Header
-  container: {
-    padding: 16,
+
+  // Main Containers
+  screen: {
     flex: 1,
   },
+
+  topContainer: {
+    padding: 12,
+  },
+
+  scroll: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40, 
+  },
+
+  bottomContainer: {
+    padding: 12,
+  },
+
   header: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -600,7 +594,104 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+
+
+
+
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+  },
+
+  modalContent: {
+    flex: 1,
+    marginTop: 60,
+    backgroundColor: "white",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  serverBox: {
+    marginTop: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+  },
+
+  extractorContainer: {
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+  },
+
+  input: {
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 5,
+    borderRadius: 6,
+  },
+
+  redButton: {
+    backgroundColor: "#f44336",
+    padding: 8,
+    borderRadius: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  orangeButton: {
+    backgroundColor: "#FF9800",
+    padding: 8,
+    borderRadius: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  greenButton: {
+    backgroundColor: "#4CAF50",
+    padding: 10,
+    borderRadius: 6,
+    marginTop: 5,
+  },
+
+  whiteText: {
+    color: "white",
+  },
+
+
+
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   
+  toggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  gearButton: {
+    padding: 8,
+  },
 });
 
 export default Annotations;
