@@ -45,7 +45,7 @@ const PlantAnnotationList = (props : PlantAnnotationListProps ) => {
               onPress={() => handleToggleDropdown(plant)}
               style={styles.annotationHeader}
             >
-              <Text style={styles.annotationTitle}>{plant.name}</Text>
+              <Text style={styles.annotationTitle}>{plantCallbacks.getName(plant?.id)}</Text>
               <PlantStatusIndicator 
                 entries={syncEntriesForPlant}
               />

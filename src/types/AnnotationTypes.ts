@@ -32,9 +32,7 @@ export interface PlantAnnotation {
 export interface FieldAnnotation {
   id: string | null;
   name: string;
-  info: string;
-  location: Location | null;
-
+  
   childPlants: string[];
 }
 
@@ -44,12 +42,20 @@ export interface LeafCallbacks {
   onEditButton: (leaf: LeafAnnotation | null, plantId?: string) => void;
   onDeleteAnnotation: (leaf: LeafAnnotation) => void;
   getSyncEntry: (videoPath: string) => SyncEntry;
-  getPlantName: (plantId?: string | null) => string;
+  getName: (leafId: string | null) => string;
 }
 
 export interface PlantCallbacks {
   onEditButton: (plant: PlantAnnotation | null, plantId?: string) => void;
   onDeleteAnnotation: (plant: PlantAnnotation) => void;
-  getLeafName: (leafId?: string | null) => string;
   getLeaves: (leafList: string[]) => LeafAnnotation[];
+  getName: (plantId: string | null) => string;
+}
+
+export interface FieldCallbacks {
+  onSelectButton: (filed: FieldAnnotation) => void;
+  onEditButton: (field: FieldAnnotation | null, fieldId?: string) => void;
+  onDeleteAnnotation: (field: FieldAnnotation) => void;
+  getPlants: (plantList: string[]) => PlantAnnotation[];
+  getName: (fieldId: string | null) => string;
 }

@@ -4,7 +4,7 @@ import { Alert, View, Button, StyleSheet, Text, TouchableOpacity} from 'react-na
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
 import { TextInput } from 'react-native-gesture-handler';
 
-import { LeafAnnotation, PlantAnnotation, FieldAnnotation, LeafCallbacks, PlantCallbacks } from '../../types/AnnotationTypes';
+import { LeafAnnotation, PlantAnnotation, FieldAnnotation, LeafCallbacks, PlantCallbacks, FieldCallbacks } from '../../types/AnnotationTypes';
 
 import { useLeafAnnotations } from '../context/LeafAnnotationsContext';
 import LeafAnnotationList from '../components/LeafAnnotationList';
@@ -15,10 +15,11 @@ import PlantAnnotationList from '../components/PlantAnnotationList';
 import PlantAnnotationModal from '../components/PlantAnnotationModal';
 
 import { useFieldAnnotations } from '../context/FieldAnnotationsContext';
+import FieldSelector from '../components/FieldSelector';
 import FieldAnnotationModal from '../components/FieldAnnotationModal';
 
 import { createLeaf, updateLeaf, deleteLeaf, attachVideo, setParentPlant } from '../services/LeafHandler';
-import { createPlant, updatePlant, deletePlant, attachChildLeaf, removeChildLeaf } from '../services/PlantHandler';
+import { createPlant, updatePlant, deletePlant, attachChildLeaf, removeChildLeaf, setParentField } from '../services/PlantHandler';
 import { createField, updateField, deleteField, attachChildPlant, removeChildPlant } from '../services/FieldHandler';
 
 import { useSync } from '../../Sync/context/SyncContext';
@@ -51,7 +52,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
   const { syncEntries } = useSync();
 
-  const { plantIdToName, leafIdToName, listToLeaves } = useAnnotationMaps(plantAnnotations, leafAnnotations);
+  const { plantIdToName, leafIdToName, listToLeaves, listToPlants, getHierarchyName } = useAnnotationMaps(fieldAnnotations, plantAnnotations, leafAnnotations);
   const { videoToSync } = useSyncMaps(syncEntries);
 
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -63,10 +64,20 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
   const [showServerSettings, setShowServerSettings] = useState(false);
 
-  const [viewMode, setViewMode] = useState<'plant' | 'leaf'>('plant');
+  const [viewMode, setViewMode] = useState<'field' | 'plant' | 'leaf'>('field');
 
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
 
+  const plantsForSelectedField = React.useMemo(() => {
+    if (!selectedFieldAnnotation) return [];
+  
+    // Find the fresh field from context
+    const freshField = fieldAnnotations.find(f => f.id === selectedFieldAnnotation.id);
+    if (!freshField) return [];
+  
+    return listToPlants(freshField.childPlants);
+  }, [selectedFieldAnnotation?.id, fieldAnnotations, plantAnnotations]);
+  
   navigation = useNavigation();
 
 
@@ -75,7 +86,9 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
    newLeaf: LeafAnnotation,
    plantId?: string
   ): string => {
+
     let leafId = newLeaf.id;
+    
     if (leafId) {
       updateLeaf(setLeafAnnotations, newLeaf);
     } else {
@@ -120,7 +133,8 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
   // Creates a plant annotation
   const handleCreatePlantAnnotation = (
-    newPlant: PlantAnnotation  
+    newPlant: PlantAnnotation,
+    fieldId?: string
   ): string => {
     
     let plantId = newPlant.id
@@ -129,12 +143,30 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     } else {
       plantId = createPlant(setPlantAnnotations, newPlant);
     }
+
+    if (fieldId) {
+      const prevFieldId = newPlant.parentField;
+      if (prevFieldId){
+        removeChildPlant(setFieldAnnotations, prevFieldId, plantId);
+      }
+      setParentField(setPlantAnnotations, plantId, fieldId);
+      attachChildPlant(setFieldAnnotations, fieldId, plantId);
+      
+      console.log(`<<== Create Plant: \n ${plantId} \n ${fieldId} \n ${newPlant.parentField} \n ${selectedFieldAnnotation?.childPlants} \n ${plantsForSelectedField}`);
+    }
+
     setPlantModalVisible(false);
     return plantId;
   };
 
   // Edits a plant annotation
   const handleEditPlantAnnotation = (plant: PlantAnnotation | null) => {
+   
+    if (!selectedFieldAnnotation?.id) {
+      Alert.alert("Select a Field", "Please select or create a field first.");
+      return "";
+    }
+
     setSelectedPlantAnnotation(plant);
     setPlantModalVisible(true);
   }
@@ -160,6 +192,12 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     } else {
       fieldId = createField(setFieldAnnotations, newField);
     }
+
+    setSelectedFieldAnnotation({
+      ...newField,
+      id: fieldId,
+    });
+
     setFieldModalVisible(false);
     return fieldId;
   };
@@ -178,6 +216,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         deletePlant(setPlantAnnotations, plantId);
       });
     });
+    setSelectedFieldAnnotation(null);
   };
 
   // Prompts you to attach a video from the VideoGallery screen
@@ -200,6 +239,9 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     setSelectedVideoPath(videoPath);
   };
   
+  const handleSelectFieldAnnotation = (field: FieldAnnotation) => {
+    setSelectedFieldAnnotation(field);
+  }
 
   const handleResetClient = () => {
     Alert.alert(
@@ -261,14 +303,22 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     onEditButton: handleEditLeafAnnotation,
     onDeleteAnnotation: handleDeleteLeafAnnotation,
     getSyncEntry: videoToSync,
-    getPlantName: plantIdToName
+    getName: (leafId) => getHierarchyName(leafId, "leaf", viewMode),
   }
 
   const plantCallbacks : PlantCallbacks = {
     onEditButton: handleEditPlantAnnotation,
     onDeleteAnnotation: handleDeletePlantAnnotation,
-    getLeafName: leafIdToName,
-    getLeaves: listToLeaves
+    getLeaves: listToLeaves,
+    getName: (plantId) => getHierarchyName(plantId, "plant", viewMode),
+  }
+
+  const fieldCallbacks : FieldCallbacks = {
+    onSelectButton: handleSelectFieldAnnotation,
+    onEditButton: handleEditFieldAnnotation,
+    onDeleteAnnotation: handleDeleteFieldAnnotation,
+    getPlants: listToPlants,
+    getName: (fieldId) => getHierarchyName(fieldId, "field", viewMode),
   }
 
   return (
@@ -278,6 +328,15 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
       {/* Toggle Switch: Plant / Leaf view */}
       <View style={styles.toggleContainer}>
         <Text style={styles.toggleLabel}>View Mode:</Text>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            viewMode === 'field' ? styles.toggleButtonActive : {}
+          ]}
+          onPress={() => setViewMode('field')}
+        >
+          <Text style={styles.toggleButtonText}>Field</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.toggleButton,
@@ -379,23 +438,52 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         selectedPlant={selectedPlantAnnotation}
       />
 
-      {/* Modal to create leaf annotations */}
+      {/* Modal to create plant annotations */}
       <PlantAnnotationModal
         visible={plantModalVisible}
         onClose={() => setPlantModalVisible(false)}
         onCreateAnnotation={handleCreatePlantAnnotation}
         selectedPlant={selectedPlantAnnotation}
+        selectedField={selectedFieldAnnotation}
       />      
 
+      {/* Modal to create field annotations */}
+      <FieldAnnotationModal
+        visible={fieldModalVisible}
+        onClose={() => setFieldModalVisible(false)}
+        onCreateAnnotation={handleCreateFieldAnnotation}
+        onDeleteAnnotation={handleDeleteFieldAnnotation}
+        selectedField={selectedFieldAnnotation}
+      />
+
       {/* Conditional Rendering */}
-      {viewMode === 'plant' ? (
+      {viewMode === 'field' && (
+        <View>
+          <FieldSelector 
+            selectedField={selectedFieldAnnotation} 
+            fieldAnnotations={fieldAnnotations} 
+            fieldCallbacks={fieldCallbacks}
+          />
+
+          <PlantAnnotationList
+            plantAnnotations={plantsForSelectedField}
+            plantCallbacks={plantCallbacks}
+            leafAnnotations={leafAnnotations}
+            leafCallbacks={leafCallbacks}
+          />
+        </View>
+      )}
+
+      {viewMode === 'plant' && (
         <PlantAnnotationList
           plantAnnotations={plantAnnotations}
           plantCallbacks={plantCallbacks}
           leafAnnotations={leafAnnotations}
           leafCallbacks={leafCallbacks}
         />
-      ) : (
+      )}
+
+      {viewMode === 'leaf' && (
         <LeafAnnotationList
           plantId="All"
           leafAnnotations={leafAnnotations}

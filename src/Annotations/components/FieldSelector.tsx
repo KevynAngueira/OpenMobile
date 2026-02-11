@@ -1,32 +1,15 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-  StyleSheet
-} from 'react-native';
-import { FieldAnnotation } from '../../types/AnnotationTypes';
+import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
+import { FieldAnnotation, FieldCallbacks } from '../../types/AnnotationTypes';
 
-interface Props {
-  fields: FieldAnnotation[];
-  selectedFieldId: string | null;
-  onSelectField: (id: string) => void;
-  onAddField: () => void;
-  onEditField: () => void;
+interface FieldAnnotationListProps {
+  selectedField: FieldAnnotation | null;
+  fieldAnnotations: FieldAnnotation[];
+  fieldCallbacks: FieldCallbacks;
 }
 
-const FieldSelector = ({
-  fields,
-  selectedFieldId,
-  onSelectField,
-  onAddField,
-  onEditField
-}: Props) => {
+const FieldSelector = ({selectedField, fieldAnnotations, fieldCallbacks}: FieldAnnotationListProps) => {
   const [visible, setVisible] = useState(false);
-
-  const selectedField = fields.find(f => f.id === selectedFieldId);
 
   return (
     <View style={styles.container}>
@@ -35,14 +18,14 @@ const FieldSelector = ({
         onPress={() => setVisible(true)}
       >
         <Text style={styles.dropdownText}>
-          Field: {selectedField?.name ?? "Select Field"}
+          Field: {fieldCallbacks.getName(selectedField?.id) ?? "Select Field"}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.gear}
-        onPress={onEditField}
-        disabled={!selectedFieldId}
+        onPress={() => fieldCallbacks.onEditButton(selectedField)}
+        disabled={!selectedField?.id}
       >
         <Text style={styles.gearText}>⚙️</Text>
       </TouchableOpacity>
@@ -51,13 +34,13 @@ const FieldSelector = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <FlatList
-              data={fields}
+              data={fieldAnnotations}
               keyExtractor={(item) => item.id!}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.item}
                   onPress={() => {
-                    onSelectField(item.id!);
+                    fieldCallbacks.onSelectButton(item);
                     setVisible(false);
                   }}
                 >
@@ -69,7 +52,7 @@ const FieldSelector = ({
                   style={[styles.item, styles.addItem]}
                   onPress={() => {
                     setVisible(false);
-                    onAddField();
+                    fieldCallbacks.onEditButton(null);
                   }}
                 >
                   <Text style={styles.addText}>+ Add Field</Text>
@@ -82,5 +65,51 @@ const FieldSelector = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dropdown: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+  },
+  dropdownText: {
+    fontSize: 16,
+  },
+  gear: {
+    marginLeft: 8,
+    padding: 8,
+  },
+  gearText: {
+    fontSize: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+  },
+  item: {
+    padding: 12,
+  },
+  addItem: {
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  addText: {
+    fontWeight: 'bold',
+  },
+});
 
 export default FieldSelector;

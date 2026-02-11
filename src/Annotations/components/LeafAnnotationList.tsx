@@ -48,7 +48,7 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
               onPress={() => handleToggleDropdown(leaf)}
               style={styles.annotationHeader}
             >
-              <Text style={styles.annotationTitle}>{leaf.name}</Text>
+              <Text style={styles.annotationTitle}>{leafCallbacks.getName(leaf?.id)}</Text>
               <LeafStatusIndicator
                   annotation={leaf}
                   entry={syncEntry}

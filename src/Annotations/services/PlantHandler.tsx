@@ -100,3 +100,14 @@ export async function removeChildLeaf(
         return updated;
     });
 }
+
+// SET FiELD
+export function setParentField( 
+    setPlantAnnotations: (a: PlantAnnotation[]) => void,
+    plantId: string | null,
+    fieldId: string | null
+) {
+    setPlantAnnotations((prev) => {
+        return prev.map((ann) => ann.id === plantId ? {...ann, parentField: fieldId} : ann)
+    });
+}

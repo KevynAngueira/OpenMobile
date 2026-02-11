@@ -18,7 +18,7 @@ const EMPTY_PLANT: PlantAnnotation = {
   childLeaves: []
 };
 
-const PlantAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedPlant}) => {
+const PlantAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedPlant, selectedField}) => {
   const [plant, setPlant] = useState<PlantAnnotation>(EMPTY_PLANT);
   
   const [latitude, setLatitude] = useState(500);
@@ -42,7 +42,7 @@ const PlantAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedPl
     };
     const updatedPlant = {...plant, location: location};
     setPlant(updatedPlant)
-    onCreateAnnotation(updatedPlant);
+    onCreateAnnotation(updatedPlant, selectedField?.id);
   };
 
   return (

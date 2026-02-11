@@ -1,24 +1,15 @@
 // PlantAnnotationModal.tsx
 import React, { useState,  useEffect } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, Button } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, Button, TouchableOpacity } from 'react-native';
 import { FieldAnnotation, Location } from '../../types/AnnotationTypes';
-
-
-const DEFAULT_LOCATION : Location = {
-  'latitude': 500,
-  'longitude': 500
-}
 
 const EMPTY_FIELD: FieldAnnotation = {
   id: null,
   name: "",
-  info: "",
-  location: DEFAULT_LOCATION,
-
   childPlants: []
 };
 
-const FieldAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedField}) => {
+const FieldAnnotationModal = ({ visible, onClose, onCreateAnnotation, onDeleteAnnotation, selectedField}) => {
   const [field, setField] = useState<FieldAnnotation>(EMPTY_FIELD);
   
   const [latitude, setLatitude] = useState(500);
@@ -49,57 +40,27 @@ const FieldAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedFi
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
+
+          {selectedField?.id && (
+            <TouchableOpacity
+              style={styles.deleteIcon}
+              onPress={() => {
+                onClose();
+                onDeleteAnnotation(selectedField);
+              }}
+            >
+              <Text style={styles.deleteIconText}>✕</Text>
+            </TouchableOpacity>
+          )}
+
+
           <Text style={styles.modalTitle}>New Field Annotation</Text>
           <TextInput
             placeholder="Enter annotation name"
             style={styles.input}
             value={field.name}
             onChangeText={(text) => {setField({...field, name: text})}}
-          />
-          
-          <TextInput
-            placeholder="Enter annotation info"
-            style={styles.input}
-            value={field.info}
-            onChangeText={(text) => {setField({...field, info: text})}}
-          />
-
-          {/* Location Section */}
-          <View style={styles.buttonSpacing}>
-            <Button 
-              title={useCustomLocation ? "Use Current Location" : "Enter Custom Coordinates"} 
-              onPress={() => {
-                setUseCustomLocation(!useCustomLocation);
-                if (!useCustomLocation) {
-                  setLatitude(500);
-                  setLongitude(500);
-                }
-            }} 
-              color={
-                (!useCustomLocation || (latitude && longitude)) 
-                  ? '#4CAF50'  // Green
-                  : '#9E9E9E'  // Grey
-              }
-            />
-          </View>
-          
-          {useCustomLocation && (
-            <>
-              <TextInput
-                placeholder="Enter latitude"
-                style={styles.input}
-                value={latitude}
-                onChangeText={setLatitude}
-              />
-              <TextInput
-                placeholder="Enter longitude"
-                style={styles.input}
-                value={longitude}
-                onChangeText={setLongitude}
-              />
-            </>
-          )}
-          
+          />    
           <View style={styles.modalButtons}>
             <Button title="Cancel" onPress={onClose} />
             <Button title={selectedField?.id ? "Confirm" : "Create"} onPress={handleCreate} />
@@ -141,7 +102,21 @@ const styles = StyleSheet.create({
    // Space between buttons
   buttonSpacing: {
     marginVertical: 10,
-  }
+  },
+
+  // Delete Button
+  deleteIcon: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 5,
+    zIndex: 10,
+  },
+  deleteIconText: {
+    fontSize: 20,
+    color: '#D32F2F', // red
+    fontWeight: 'bold',
+  },
 });
 
 export default FieldAnnotationModal;
