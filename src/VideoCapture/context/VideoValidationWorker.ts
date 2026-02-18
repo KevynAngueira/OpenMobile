@@ -20,8 +20,8 @@ export const runVideoValidations = async (
      * }
      */
 
-    console.log("++++++++++")
-    if ((res.tool.label == "Tool") && (res.leaf.label != "Traversing")) console.log("<--------------------- HERE")
+    // console.log("++++++++++")
+    if ((res.tool.label == "Tool") && (res.leaf.label != "Traversing")) //console.log("<--------------------- HERE")
     console.log(`Video: ${video.videoPath}`)
     console.log(res.tool)
     console.log(res.leaf)

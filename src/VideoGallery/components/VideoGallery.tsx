@@ -7,7 +7,7 @@ import { RouteProp } from '@react-navigation/native';
 import { useLeafAnnotations } from '../../Annotations/context/LeafAnnotationsContext';
 import { useVideoCapture } from '../../VideoCapture/Index';
 import { validateVideoCapture } from '../../VideoCapture/VideoCaptureValidate';
-import VideoItem from '../VideoItem';
+import VideoItem from './VideoItem';
 
 interface VideoGalleryProps {
   route: RouteProp<any, any>; 

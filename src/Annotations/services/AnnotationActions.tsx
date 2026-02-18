@@ -2,46 +2,56 @@
 import { server } from '../../../metro.config';
 import { useSync } from '../../Sync/context/SyncContext';
 import { isLeafDetailsValid } from '../utils/AnnotationValidation';
+import { useManifestSync } from '../../Sync/context/ManifestSyncContext';
+import { FieldAnnotation, LeafAnnotation, PlantAnnotation } from '../../types/AnnotationTypes';
 
 const useHandleSync = () => {
   const { syncAllPending } = useSync();
+  const { syncAllManifest } = useManifestSync();
   
   const handleSync = async (
     serverURL: string,
-    leafAnnotations: any[],
+    fieldAnnotations: FieldAnnotation[],
+    plantAnnotations: PlantAnnotation[],
+    leafAnnotations: LeafAnnotation[],
     setSyncResult: (message: string) => void
   ) => {
 
-    //console.log('Inside handleSendAnnotationsVideos'); // Debug log
     if (!serverURL) {
       setSyncResult("⚠️ Configure server IP & port first");
       return;
     }
 
+
     const entriesToSend = leafAnnotations
-      .filter((leafAnnotation) => {
-        const validVideo = leafAnnotation.video;
-        const validLeaf = isLeafDetailsValid(leafAnnotation.length, leafAnnotation.leafNumber, leafAnnotation.leafWidths);
-        console.log("===================");
-        console.log(validVideo);
-        console.log(validLeaf);
-        return validVideo && validLeaf
-      })
-      .map((leafAnnotation) => ({
-        path: leafAnnotation.video,
-        params: {
-          length: leafAnnotation.length,
-          leafNumber: leafAnnotation.leafNumber,
-          leafWidths: leafAnnotation.leafWidths
-        }
-      }));
+    .filter((leaf) =>
+      leaf.video &&
+      isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.leafWidths)
+    )
+    .map((leaf) => ({
+      path: leaf.video,
+      params: {
+        length: leaf.length,
+        leafNumber: leaf.leafNumber,
+        leafWidths: leaf.leafWidths
+      }
+    }));
    
-    // Run sync process
+    // Run Sync Inference
     try {
       await syncAllPending(serverURL, entriesToSend, setSyncResult);
-    } catch (error) {
-      console.error('Sync error:', error);
-      setSyncResult("Sync Failed: " + error.message);
+    } catch (error: any) {
+      console.error('Inference Sync error:', error);
+      setSyncResult("Inference Sync Failed: " + error.message);
+      setTimeout(() => setSyncResult(null), 3000);
+    }
+
+    // Run Sync Manifests
+    try {
+      await syncAllManifest(serverURL, fieldAnnotations, plantAnnotations, leafAnnotations);
+    } catch (error: any) {
+      console.error("Manifest Sync error:", error);
+      setSyncResult("Manifest Sync Failed: " + error.message);
       setTimeout(() => setSyncResult(null), 3000);
     }
   };
@@ -50,4 +60,3 @@ const useHandleSync = () => {
 }
 
 export default useHandleSync;
-

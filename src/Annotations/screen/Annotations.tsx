@@ -1,9 +1,8 @@
 // Annotations.tsx
 import React, { useState, useEffect } from 'react';
-import { Alert, View, Button, StyleSheet, Text, TouchableOpacity, ScrollView, Modal} from 'react-native';
+import { Alert, View, StyleSheet, Text, TouchableOpacity, ScrollView} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation } from '@react-navigation/native'; 
-import { TextInput } from 'react-native-gesture-handler';
 
 import { LeafAnnotation, PlantAnnotation, FieldAnnotation, LeafCallbacks, PlantCallbacks, FieldCallbacks } from '../../types/AnnotationTypes';
 
@@ -37,6 +36,7 @@ import ToolBatchExtractorView from '../../Validation/components/ToolBatchCandida
 
 import { useVideoCapture } from '../../VideoCapture/Index';
 import RNFS from 'react-native-fs';
+import { canUseDevFlags } from '../../DevConsole/configs/DevFlagsConfig';
 
 interface AnnotationsProps {
   route: RouteProp<any, any>; 
@@ -365,12 +365,16 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
           </View>
 
           {/* Right side (gear icon) */}
-          <TouchableOpacity
-            onPress={() => setConfigVisible(true)}
-            style={styles.gearButton}
-          >
-            <Text style={{ fontSize: 22 }}>⚙️</Text>
-          </TouchableOpacity>
+          { canUseDevFlags ? (
+            <TouchableOpacity
+              onPress={() => navigation.navigate("DevPanel")}
+              style={styles.gearButton}
+            >
+              <Text style={{ fontSize: 22 }}>⚙️</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={{ fontSize: 22 }}>Prod</Text>
+          )}          
         </View>
         
         <DevConfigModal
@@ -391,6 +395,13 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
               folderPath={`${RNFS.ExternalDirectoryPath}/snapmedia/videos`}
             />
           }
+        />
+
+        {/* Select the current field */}
+        <FieldSelector 
+          selectedField={selectedFieldAnnotation} 
+          fieldAnnotations={fieldAnnotations} 
+          fieldCallbacks={fieldCallbacks}
         />
       </View>
 
@@ -430,20 +441,12 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
 
         {/* Conditional Rendering */}
         {viewMode === 'field' && (
-          <View>
-            <FieldSelector 
-              selectedField={selectedFieldAnnotation} 
-              fieldAnnotations={fieldAnnotations} 
-              fieldCallbacks={fieldCallbacks}
-            />
-
-            <PlantAnnotationList
-              plantAnnotations={plantsForSelectedField}
-              plantCallbacks={plantCallbacks}
-              leafAnnotations={leafAnnotations}
-              leafCallbacks={leafCallbacks}
-            />
-          </View>
+          <PlantAnnotationList
+            plantAnnotations={plantsForSelectedField}
+            plantCallbacks={plantCallbacks}
+            leafAnnotations={leafAnnotations}
+            leafCallbacks={leafCallbacks}
+          />
         )}
 
         {viewMode === 'plant' && (
@@ -481,7 +484,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         {/* Sync Button */}
         <TouchableOpacity
           style={styles.syncButton}
-          onPress={() => handleSync(serverURL, leafAnnotations, setSyncResult)}
+          onPress={() => handleSync(serverURL!, fieldAnnotations, plantAnnotations, leafAnnotations, setSyncResult)}
         >
           <Text style={styles.syncButtonText}>Sync</Text>
         </TouchableOpacity>
@@ -524,6 +527,7 @@ const styles = StyleSheet.create({
   // Toggle Switch
   toggleContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
@@ -595,94 +599,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-
-
-
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-  },
-
-  modalContent: {
-    flex: 1,
-    marginTop: 60,
-    backgroundColor: "white",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-  },
-
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-
-  serverBox: {
-    marginTop: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-  },
-
-  extractorContainer: {
-    marginVertical: 16,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-  },
-
-  input: {
-    borderWidth: 1,
-    padding: 8,
-    marginBottom: 5,
-    borderRadius: 6,
-  },
-
-  redButton: {
-    backgroundColor: "#f44336",
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-
-  orangeButton: {
-    backgroundColor: "#FF9800",
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-
-  greenButton: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 6,
-    marginTop: 5,
-  },
-
-  whiteText: {
-    color: "white",
-  },
-
-
-
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
   
   toggleLeft: {
     flexDirection: 'row',

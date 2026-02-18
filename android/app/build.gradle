@@ -1,7 +1,14 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
-apply plugin: 'com.google.gms.google-services'
+
+gradle.projectsEvaluated {
+    if (!gradle.startParameter.taskNames.any { it.toLowerCase().contains("dev") }) {
+        apply plugin: 'com.google.gms.google-services'
+    } else {
+        println "Skipping Firebase for dev build"
+    }
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -79,6 +86,9 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.openmobile"
+
+    flavorDimensions "environment"
+
     defaultConfig {
         applicationId "com.openmobile"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -86,6 +96,21 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    productFlavors {
+        dev {
+            dimension "environment"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            buildConfigField "boolean", "DEV_MODE", "true"
+        }
+
+        prod {
+            dimension "environment"
+            buildConfigField "boolean", "DEV_MODE", "false"
+        }
+    }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -94,19 +119,19 @@ android {
             keyPassword 'android'
         }
     }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
 }
+
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin

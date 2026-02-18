@@ -7,7 +7,7 @@ export interface Location {
 }
 
 export interface LeafAnnotation {
-  id: string | null;
+  id: string;
   name: string;
   info: string;
   video: string | null;
@@ -20,7 +20,7 @@ export interface LeafAnnotation {
 }
 
 export interface PlantAnnotation {
-  id: string | null;
+  id: string;
   name: string;
   info: string;
   location: Location | null;
@@ -30,7 +30,7 @@ export interface PlantAnnotation {
 }
 
 export interface FieldAnnotation {
-  id: string | null;
+  id: string;
   name: string;
   
   childPlants: string[];
