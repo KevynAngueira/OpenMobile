@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
 import { VideoCapture } from './Index'; 
-import { Location } from '../types/AnnotationTypes';
+import { DevFlags } from '../DevConsole/configs/DevFlagsConfig';
 
 type ValidationPair = {
   status: 'Attachable' | 'Pending' | 'Failed' | 'Location';
@@ -16,11 +16,11 @@ type ValidationResult = {
 /**
  * Validates a video capture and optionally shows an alert/toast
  */
-export function validateVideoCapture(
+export async function validateVideoCapture(
   vc: VideoCapture | undefined,
-  location: Location,
   showFeedback: boolean = true
-): ValidationResult {
+): Promise<ValidationResult> {
+  
   let pair: ValidationPair = { status: 'Attachable', text: 'Video can be attached' };
 
   if (!true) {
@@ -33,11 +33,29 @@ export function validateVideoCapture(
     pair = { status: 'Failed', text: 'Validation failed, you must retake the video' };
   }
 
-  if (showFeedback && pair.status !== 'Attachable') {
-    Alert.alert(`Error: ${pair.status}`, pair.text, [{ text: 'Ok', style: 'cancel' }]);
+  if (DevFlags.isEnabled('bypassVideoValidation') && showFeedback && pair.status === 'Failed') {
+    await new Promise<void>((resolve) => {
+      Alert.alert(
+        `Bypass Validation?`,
+        "This video failed validation.\n\nDo you want to attach it anyway?",
+        [
+          { text: "Cancel", style: "cancel", onPress: () => resolve() },
+          {
+            text: "Attach Anyway",
+            style: "destructive",
+            onPress: () => {
+              pair = { status: 'Attachable', text: 'Video can be attached' };
+              resolve();
+            },
+          },
+        ]
+      );
+    });
+  } else if (showFeedback && pair.status !== 'Attachable') {
+    await new Promise<void>((resolve) => {
+      Alert.alert(`Error: ${pair.status}`, pair.text, [{ text: 'Ok', style: 'cancel', onPress: () => resolve() }]);
+    });
   }
 
-  let result:ValidationResult = { status: pair.status, isValid: (pair.status === "Attachable")}
-
-  return result;
+  return { status: pair.status, isValid: pair.status === "Attachable" };
 }

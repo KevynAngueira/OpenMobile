@@ -67,16 +67,11 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     fail: '#F44336',      // red
   };
 
-  // Validates video location matches annotation location
-  const validateLocation = (videoName: string) => {
-    return true;
-  }
-
   // Handles callback to Annotations screen
-  const handleVideoSelect = (videoPath: string) => { 
+  const handleVideoSelect = async (videoPath: string) => { 
   
     const vc = videoCaptures.find(v => v.videoPath === videoPath);
-    const statusResult = vc ? validateVideoCapture(vc) : null;
+    const statusResult = vc ? await validateVideoCapture(vc) : null;
 
     if (!vc || !statusResult?.isValid) {
       return;
@@ -88,7 +83,7 @@ const VideoGallery: React.FC<VideoGalleryProps> = ({ route, navigation }) => {
     if (annotationUsingVideo) {
       Alert.alert(
         'Video Already Attached',
-        `This video is already attached to "${annotationUsingVideo.name}". Do you want to remove it and attach it to "${selectedLeafAnnotation.name}"?`,
+        `This video is already attached to "${annotationUsingVideo.name}". Do you want to remove it and attach it to "${selectedLeafAnnotation?.name}"?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {

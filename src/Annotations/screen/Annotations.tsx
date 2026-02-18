@@ -22,20 +22,12 @@ import { createLeaf, updateLeaf, deleteLeaf, attachVideo, setParentPlant } from 
 import { createPlant, updatePlant, deletePlant, attachChildLeaf, removeChildLeaf, setParentField } from '../services/PlantHandler';
 import { createField, updateField, deleteField, attachChildPlant, removeChildPlant } from '../services/FieldHandler';
 
-import DevConfigModal from '../components/DevConfigModal';
 import { useSync } from '../../Sync/context/SyncContext';
 import useHandleSync from '../services/AnnotationActions';
-import { useServerConfig } from '../../hooks/useServerConfig';
 
 import { useAnnotationMaps } from '../../hooks/useAnnotationMaps';
 import { useSyncMaps } from '../../hooks/useSyncMaps';
 
-import ToolClassifierView from '../../Validation/components/ToolClassifierView'
-import ToolCandidateView from '../../Validation/components/ToolCandidateView'
-import ToolBatchExtractorView from '../../Validation/components/ToolBatchCandidateView';
-
-import { useVideoCapture } from '../../VideoCapture/Index';
-import RNFS from 'react-native-fs';
 import { canUseDevFlags } from '../../DevConsole/configs/DevFlagsConfig';
 
 interface AnnotationsProps {
@@ -54,19 +46,13 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const [plantModalVisible, setPlantModalVisible] = useState(false);
   const [fieldModalVisible, setFieldModalVisible] = useState(false);
   
-
   const { syncEntries } = useSync();
   const { videoToSync } = useSyncMaps(syncEntries);
 
-  const [syncResult, setSyncResult] = useState<string | null>(null);
   const { handleSync } = useHandleSync();
-  const { removeAllSyncEntry } = useSync();
-
-  const [configVisible, setConfigVisible] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+ 
   const [viewMode, setViewMode] = useState<'field' | 'plant' | 'leaf'>('field');
-  const { resetAllVideoCaptures } = useVideoCapture();
-  const { ip, port, setIP, setPort, saveServerSettings, serverURL } = useServerConfig();
-  const [showServerSettings, setShowServerSettings] = useState(false);
 
   const [selectedVideoPath, setSelectedVideoPath] = useState<string | null>(null);
 
@@ -244,52 +230,6 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     setSelectedFieldAnnotation(field);
   }
 
-  const handleResetClient = () => {
-    Alert.alert(
-      "Confirm Reset",
-      "Are you sure you want to delete all entries?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes", style: "destructive", onPress: () => removeAllSyncEntry() }
-      ]
-    );
-  };
-
-  const handleResetCaptures = () => {
-    Alert.alert(
-      "Confirm Reset",
-      "Are you sure you want to delete all validation captures?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes", style: "destructive", onPress: () => resetAllVideoCaptures() }
-      ]
-    );
-  };
-
-  const handleResetServer = () => {
-    Alert.alert(
-      "Confirm Server Reset",
-      "Are you sure you want to reset the server cache?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Yes", 
-          style: "destructive", 
-          onPress: async () => {
-            try {
-              const response = await fetch(`${serverURL}/reset`, {method: "POST"});
-              const data = await response.json();
-              Alert.alert("Server Reset", data.message || "Server cache reset.");
-            } catch (err) {
-              Alert.alert("Error", `Failed to reset server: ${err.message}`);
-            }
-          } 
-        }
-      ]
-    );
-  };
-
-
   // If videoUri is passed via params, auto-select that video
   useEffect(() => {
     if (route.params?.selectedVideo) {
@@ -376,26 +316,6 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
             <Text style={{ fontSize: 22 }}>Prod</Text>
           )}          
         </View>
-        
-        <DevConfigModal
-          visible={configVisible}
-          onClose={() => setConfigVisible(false)}
-          handleResetClient={handleResetClient}
-          handleResetServer={handleResetServer}
-          handleResetCaptures={handleResetCaptures}
-          showServerSettings={showServerSettings}
-          setShowServerSettings={setShowServerSettings}
-          ip={ip}
-          port={port}
-          setIP={setIP}
-          setPort={setPort}
-          saveServerSettings={saveServerSettings}
-          extractorComponent={
-            <ToolBatchExtractorView
-              folderPath={`${RNFS.ExternalDirectoryPath}/snapmedia/videos`}
-            />
-          }
-        />
 
         {/* Select the current field */}
         <FieldSelector 
