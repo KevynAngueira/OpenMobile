@@ -404,7 +404,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
         {/* Sync Button */}
         <TouchableOpacity
           style={styles.syncButton}
-          onPress={() => handleSync(serverURL!, fieldAnnotations, plantAnnotations, leafAnnotations, setSyncResult)}
+          onPress={() => handleSync(fieldAnnotations, plantAnnotations, leafAnnotations, setSyncResult)}
         >
           <Text style={styles.syncButtonText}>Sync</Text>
         </TouchableOpacity>

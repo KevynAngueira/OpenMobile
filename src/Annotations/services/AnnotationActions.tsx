@@ -5,23 +5,20 @@ import { isLeafDetailsValid } from '../utils/AnnotationValidation';
 import { useManifestSync } from '../../Sync/context/ManifestSyncContext';
 import { FieldAnnotation, LeafAnnotation, PlantAnnotation } from '../../types/AnnotationTypes';
 
+import { DevServerConfig } from '../../DevConsole/configs/DevServerConfig';
+
 const useHandleSync = () => {
   const { syncAllPending } = useSync();
   const { syncAllManifest } = useManifestSync();
   
   const handleSync = async (
-    serverURL: string,
     fieldAnnotations: FieldAnnotation[],
     plantAnnotations: PlantAnnotation[],
     leafAnnotations: LeafAnnotation[],
     setSyncResult: (message: string) => void
   ) => {
 
-    if (!serverURL) {
-      setSyncResult("⚠️ Configure server IP & port first");
-      return;
-    }
-
+    let serverURL = DevServerConfig.getBaseURL(); 
 
     const entriesToSend = leafAnnotations
     .filter((leaf) =>
