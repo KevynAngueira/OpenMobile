@@ -1,7 +1,9 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+//apply plugin: 'com.google.gms.google-services'
 
+/*
 gradle.projectsEvaluated {
     if (!gradle.startParameter.taskNames.any { it.toLowerCase().contains("dev") }) {
         apply plugin: 'com.google.gms.google-services'
@@ -9,6 +11,7 @@ gradle.projectsEvaluated {
         println "Skipping Firebase for dev build"
     }
 }
+*/
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -95,8 +98,11 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        buildConfigField "boolean", "DEV_MODE", "true"
     }
 
+    /*
     productFlavors {
         dev {
             dimension "environment"
@@ -110,6 +116,7 @@ android {
             buildConfigField "boolean", "DEV_MODE", "false"
         }
     }
+    */
 
     signingConfigs {
         debug {
@@ -132,13 +139,12 @@ android {
     }
 }
 
-
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation project(':opencv')
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:latest.release'
-    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    //implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
