@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { FieldAnnotation, PlantAnnotation, LeafAnnotation } from '../../types/AnnotationTypes';
+import { apiFetch } from '../../network/ApiFetch';
 
 interface ManifestSyncContextType {
   syncAllManifest: (
@@ -87,7 +88,7 @@ export const ManifestSyncProvider: React.FC<{ children: React.ReactNode }> = ({ 
     serverURL: string,
     artifact: PlantArtifact
   ) {
-    const res = await fetch(`${serverURL}/send/manifest/plant`, {
+    const res = await apiFetch(`${serverURL}/send/manifest/plant`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(artifact),
@@ -102,7 +103,7 @@ export const ManifestSyncProvider: React.FC<{ children: React.ReactNode }> = ({ 
     serverURL: string,
     artifact: FieldArtifact
   ) {
-    const res = await fetch(`${serverURL}/send/manifest/field`, {
+    const res = await apiFetch(`${serverURL}/send/manifest/field`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(artifact),

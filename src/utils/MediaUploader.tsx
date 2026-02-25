@@ -1,3 +1,5 @@
+import { apiFetch } from "../network/ApiFetch";
+
 // MediaUploader.tsx
 interface MediaUploadItem {
   path: String;
@@ -32,7 +34,7 @@ export const sendMedia = async (
         formData.append('params', JSON.stringify(params));
       }
 
-      response = await fetch(endpoint, {
+      response = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
@@ -65,7 +67,7 @@ export const sendParams = async (
     try {
       let response;
 
-      response = await fetch(endpoint, {
+      response = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

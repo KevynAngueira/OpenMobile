@@ -7,6 +7,7 @@ import { useVideoCapture } from '../../VideoCapture/Index';
 
 // Import Configs
 import { DevServerConfig } from '../configs/DevServerConfig';
+import { apiFetch } from '../../network/ApiFetch';
 
 export default function DevResetSection() {
     const { resetAllVideoCaptures } = useVideoCapture();
@@ -46,7 +47,7 @@ export default function DevResetSection() {
               style: "destructive", 
               onPress: async () => {
                 try {
-                  const response = await fetch(`${baseURL}/reset`, {method: "POST"});
+                  const response = await apiFetch(`${baseURL}/reset`, {method: "POST"});
                   const data = await response.json();
                   Alert.alert("Server Reset", data.message || "Server cache reset.");
                 } catch (err) {
