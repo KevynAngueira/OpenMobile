@@ -7,6 +7,8 @@ import Video from 'react-native-video';
 import { LeafStatusIndicator } from './LeafStatusIndicator';
 import { getLeafSyncUIState, LeafSyncUIConfig } from '../utils/LeafSyncUIState';
 import { LeafAnnotation, LeafCallbacks } from '../../types/AnnotationTypes';
+import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig'
+import { resetEntry } from '../../network/ResetEntry';
 
 interface LeafAnnotationListProps {
   plantId: string;
@@ -154,7 +156,7 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
                   )}
 
                   {/* RESULTS TAB */}
-                  {activeView === "results" && (
+                  {activeView === "results" && (                                        
                     <View>
                       <View style={styles.tabContent}>
                         <Text style={styles.tabTitle}>Results</Text>
@@ -167,6 +169,16 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
                           )}
                         </View>
                       </View>
+
+                      {/* RESET BUTTON (DEV ONLY) */}
+                      {DevFlags.isEnabled("allowResetEntries") && (
+                        <TouchableOpacity
+                          style={styles.resetButton}
+                          onPress={() => leafCallbacks.resetEntry(leaf)}
+                        >
+                          <Text style={styles.resetButtonText}>Reset</Text>
+                        </TouchableOpacity>
+                      )}
 
                       <TouchableOpacity
                         style={styles.deleteButton}
@@ -232,7 +244,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
-  // Delete Annotation Button
+  // Attach Annotation Button
   attachButton: {
     backgroundColor: '#1E3A5F',
     padding: 9,
@@ -266,6 +278,20 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#fff',
     textAlign: 'center',
+  },
+
+  // Reset Annotation Button
+  resetButton: {
+    backgroundColor: '#f0ad4e', // orange
+    padding: 9,
+    borderRadius: 5,
+    marginTop: 8,
+  },
+  
+  resetButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
   },
 
   // Attached Video

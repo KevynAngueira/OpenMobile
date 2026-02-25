@@ -29,6 +29,7 @@ import { useAnnotationMaps } from '../../hooks/useAnnotationMaps';
 import { useSyncMaps } from '../../hooks/useSyncMaps';
 
 import { canUseDevFlags } from '../../DevConsole/configs/DevFlagsConfig';
+import { resetEntry } from '../../network/ResetEntry';
 
 interface AnnotationsProps {
   route: RouteProp<any, any>; 
@@ -46,7 +47,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const [plantModalVisible, setPlantModalVisible] = useState(false);
   const [fieldModalVisible, setFieldModalVisible] = useState(false);
   
-  const { syncEntries } = useSync();
+  const { syncEntries, removeSyncEntry } = useSync();
   const { videoToSync } = useSyncMaps(syncEntries);
 
   const { handleSync } = useHandleSync();
@@ -245,6 +246,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     onDeleteAnnotation: handleDeleteLeafAnnotation,
     getSyncEntry: videoToSync,
     getName: (leafId) => getHierarchyName(leafId, "leaf", viewMode),
+    resetEntry: (leaf) => resetEntry(leaf, removeSyncEntry),
   }
 
   const plantCallbacks : PlantCallbacks = {

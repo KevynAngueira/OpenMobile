@@ -43,6 +43,7 @@ export interface LeafCallbacks {
   onDeleteAnnotation: (leaf: LeafAnnotation) => void;
   getSyncEntry: (videoPath: string) => SyncEntry;
   getName: (leafId: string | null) => string;
+  resetEntry: (leaf: LeafAnnotation) => void;
 }
 
 export interface PlantCallbacks {
