@@ -64,7 +64,7 @@ const PlantAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedPl
             onChangeText={(text) => {setPlant({...plant, info: text})}}
           />
 
-          {/* Location Section */}
+          {/* Location Section }
           <View style={styles.buttonSpacing}>
             <Button 
               title={useCustomLocation ? "Use Current Location" : "Enter Custom Coordinates"} 
@@ -99,7 +99,8 @@ const PlantAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedPl
               />
             </>
           )}
-          
+          */}
+
           <View style={styles.modalButtons}>
             <Button title="Cancel" onPress={onClose} />
             <Button title={selectedPlant?.id ? "Confirm" : "Create"} onPress={handleCreate} />

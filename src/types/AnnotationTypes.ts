@@ -16,6 +16,11 @@ export interface LeafAnnotation {
   leafNumber: string;
   leafWidths: string[];
 
+  // Alternative Inputs
+  directArea: string;
+  maxLength: string;
+  maxWidth: string;
+
   parentPlant: string;
 }
 

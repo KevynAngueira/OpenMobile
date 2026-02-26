@@ -4,12 +4,14 @@ import { isDevMode } from "../../native/BuildConfigBridge";
 type DevFlagsType = {
   useDevStorage: boolean;
   bypassVideoValidation: boolean;
+  altOriginalArea: boolean;
   allowResetEntries: boolean;
 };
 
 const flags: DevFlagsType = {
   useDevStorage: false,
   bypassVideoValidation: false,
+  altOriginalArea: false,
   allowResetEntries: false,
 };
 

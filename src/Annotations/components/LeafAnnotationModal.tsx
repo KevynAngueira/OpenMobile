@@ -3,6 +3,7 @@ import React, { useState,  useEffect } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, Button } from 'react-native';
 import { isLeafDetailsValid } from '../utils/AnnotationValidation';
 import { LeafAnnotation, Location } from '../../types/AnnotationTypes';
+import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig';
 
 
 const DEFAULT_LOCATION : Location = {
@@ -19,12 +20,17 @@ const EMPTY_LEAF: LeafAnnotation = {
   leafWidths: [],
   length: "",
   video: null,
+
+  directArea: "",
+  maxLength: "",
+  maxWidth: "",
   
   parentPlant: "",
 };
 
 const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLeaf, selectedPlant}) => {
   const [leaf, setLeaf] = useState<LeafAnnotation>(EMPTY_LEAF);
+  const [leafValid, setLeafValid] = useState(false);
   
   const [latitude, setLatitude] = useState(500);
   const [longitude, setLongitude] = useState(500);
@@ -46,6 +52,19 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
     }
     setShowLeafDetails(true);
   }, [selectedLeaf]);
+
+  useEffect(() => {
+    setLeafValid(
+      isLeafDetailsValid(
+        leaf.length,
+        leaf.leafNumber,
+        leaf.leafWidths,
+        leaf.directArea,
+        leaf.maxLength,
+        leaf.maxWidth
+      )
+    );
+  }, [leaf]);
 
   const handleCreate = () => {
     const location = {
@@ -81,14 +100,15 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
             <Button
               title={showLeafDetails ? 'Hide Leaf Details' : 'Enter Leaf Details'}
               onPress={() => setShowLeafDetails(!showLeafDetails)}
-              color={isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.leafWidths) ? '#4CAF50' : '#B0B0B0'}
+              color={leafValid ? '#4CAF50' : '#B0B0B0'}
             />
           </View>
 
           {showLeafDetails && (
             <View style={styles.leafSection}>
-              <Text style={styles.sectionTitle}>Leaf Details</Text>
 
+              {/* Remaining Area */}
+              <Text style={styles.sectionHeader}>Remaining Area</Text>
               <TextInput
                 placeholder="Enter current length (in)"
                 style={styles.input}
@@ -97,36 +117,67 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
                 keyboardType="numeric"
               />
 
-              <TextInput
-                placeholder="Enter leaf number (7–21)"
-                style={styles.input}
-                value={leaf.leafNumber}
-                onChangeText={(text) => setLeaf({ ...leaf, leafNumber: text })}
-                keyboardType="numeric"
-              />
+              {/* Original Area */}
+              {!DevFlags.isEnabled("altOriginalArea") ? (
+                <>
+                  <Text style={styles.sectionHeader}>Original Area</Text>
+                  <TextInput
+                    placeholder="Enter leaf number (7–21)"
+                    style={styles.input}
+                    value={leaf.leafNumber}
+                    onChangeText={(text) => setLeaf({ ...leaf, leafNumber: text })}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    placeholder="Enter Base Widths (in, comma-separated)"
+                    style={styles.input}
+                    value={leafWidthsText}
+                    onChangeText={(text) => {
+                      setLeafWidthsText(text);
+                      const widths = text
+                        .split(',')
+                        .map((w) => w.trim())
+                        .filter((w) => w !== '' && !isNaN(Number(w)))
+                        .map(String);
+                      setLeaf({ ...leaf, leafWidths: widths });
+                    }}
+                    onBlur={() => setLeafWidthsText(leaf.leafWidths.join(', '))}
+                    keyboardType="numeric"
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.sectionHeader}>Alternate Original Area</Text>
+                  <TextInput
+                    placeholder="Enter Direct Area"
+                    style={styles.input}
+                    value={leaf.directArea}
+                    onChangeText={(text) => setLeaf({ ...leaf, directArea: text })}
+                    keyboardType="numeric"
+                  />
 
-              <TextInput
-                placeholder="Enter Leaf Widths (in, commas)"
-                style={styles.input}
-                value={leafWidthsText}
-                onChangeText={(text) => {
-                  setLeafWidthsText(text);
+                  <Text style={styles.sectionHeader}>Or</Text>
 
-                  const widths = text
-                    .split(',')
-                    .map(w => w.trim())
-                    .filter(w => w !== '' && !isNaN(Number(w)))
-                    .map(String);
-
-                  setLeaf({...leaf, leafWidths: widths});
-                }}
-                onBlur={() => setLeafWidthsText(leaf.leafWidths.join(', '))}
-                keyboardType="numeric"
-              />
+                  <TextInput
+                    placeholder="Enter Max Length"
+                    style={styles.input}
+                    value={leaf.maxLength}
+                    onChangeText={(text) => setLeaf({ ...leaf, maxLength: text })}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    placeholder="Enter Max Width"
+                    style={styles.input}
+                    value={leaf.maxWidth}
+                    onChangeText={(text) => setLeaf({ ...leaf, maxWidth: text })}
+                    keyboardType="numeric"
+                  />
+                </>
+              )}
             </View>
           )}
           
-          {/* Location Section */}
+          {/* Location Section }
           <View style={styles.buttonSpacing}>
             <Button 
               title={useCustomLocation ? "Use Current Location" : "Enter Custom Coordinates"} 
@@ -161,6 +212,7 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
               />
             </>
           )}
+          */}
           
           <View style={styles.modalButtons}>
             <Button title="Cancel" onPress={onClose} />
@@ -174,6 +226,13 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
 
 const styles = StyleSheet.create({
   // Modal Container
+  modalTitle: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 5,
+    color: '#333',
+  },
+
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -187,6 +246,7 @@ const styles = StyleSheet.create({
     width: '80%',
   },
   modalButtons: {
+    marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -203,7 +263,22 @@ const styles = StyleSheet.create({
    // Space between buttons
   buttonSpacing: {
     marginVertical: 10,
-  }
+  },
+
+  // Sections
+  sectionHeader: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 5,
+    marginBottom: 5,
+    color: '#333',
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginBottom: 10,
+  },
 });
 
 export default LeafAnnotationModal;

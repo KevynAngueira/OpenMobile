@@ -6,6 +6,7 @@ import { useManifestSync } from '../../Sync/context/ManifestSyncContext';
 import { FieldAnnotation, LeafAnnotation, PlantAnnotation } from '../../types/AnnotationTypes';
 
 import { DevServerConfig } from '../../DevConsole/configs/DevServerConfig';
+import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig';
 
 const useHandleSync = () => {
   const { syncAllPending } = useSync();
@@ -23,16 +24,30 @@ const useHandleSync = () => {
     const entriesToSend = leafAnnotations
     .filter((leaf) =>
       leaf.video &&
-      isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.leafWidths)
+      isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.leafWidths, leaf.directArea, leaf.maxLength, leaf.maxWidth)
     )
-    .map((leaf) => ({
-      path: leaf.video,
-      params: {
-        length: leaf.length,
-        leafNumber: leaf.leafNumber,
-        leafWidths: leaf.leafWidths
+    .map((leaf) => {
+      const params: any = {};
+
+      params.length = leaf.length;
+      params.leafNumber = leaf.leafNumber;
+      params.leafWidths = leaf.leafWidths;
+
+      if (DevFlags.isEnabled("altOriginalArea")){
+        params.directArea = leaf.directArea;
+        params.maxLength = leaf.maxLength;
+        params.maxWidth = leaf.maxWidth;
+      } else {
+        params.directArea = "";
+        params.maxLength = "";
+        params.maxWidth = "";
       }
-    }));
+
+      return {
+        path: leaf.video,
+        params
+      };
+    });
    
     // Run Sync Inference
     try {

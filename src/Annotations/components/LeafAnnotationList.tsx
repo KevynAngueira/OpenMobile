@@ -123,32 +123,55 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
                           <Text style={styles.infoValue}>{leaf.info || "—"}</Text>
                         </View>
 
+                        {/*
                         <View style={styles.infoRow}>
                           <Text style={styles.infoLabel}>Location:</Text>
                           <Text style={styles.infoValue}>
                             {leaf.location?.latitude ?? "—"}, {leaf.location?.longitude ?? "—"}
                           </Text>
                         </View>
+                        */}
 
+                        {/* Remaining Area */}
                         <View style={styles.infoRow}>
                           <Text style={styles.infoLabel}>Length:</Text>
-                          <Text style={styles.infoValue}>{leaf.length}</Text>
+                          <Text style={styles.infoValue}>{leaf.length || "—"}</Text>
                         </View>
 
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>Leaf Number:</Text>
-                          <Text style={styles.infoValue}>{leaf.leafNumber}</Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>Widths:</Text>
-                          <Text style={styles.infoValue}>{leaf.leafWidths?.join(", ")}</Text>
-                        </View>
+                        { !DevFlags.isEnabled("altOriginalArea") ? (
+                          <>
+                            {/* Standard Original Area */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>Leaf Number:</Text>
+                              <Text style={styles.infoValue}>{leaf.leafNumber || "—"}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>Widths:</Text>
+                              <Text style={styles.infoValue}>{leaf.leafWidths?.join(", ") || "—"}</Text>
+                            </View>
+                          </>
+                        ) : (
+                          <>
+                            {/* Alternative Original Area */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>Direct Area:</Text>
+                              <Text style={styles.infoValue}>{leaf.directArea || "—"}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>Max Length:</Text>
+                              <Text style={styles.infoValue}>{leaf.maxLength || "—"}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>Max Width:</Text>
+                              <Text style={styles.infoValue}>{leaf.maxWidth || "—"}</Text>
+                            </View>
+                          </>
+                        )}
                       </View>
 
                       <TouchableOpacity
                         style={styles.editButton}
-                        onPress={() =>  leafCallbacks.onEditButton(leaf, plantId)}
+                        onPress={() => leafCallbacks.onEditButton(leaf, plantId)}
                       >
                         <Text style={styles.editButtonText}>Edit</Text>
                       </TouchableOpacity>
