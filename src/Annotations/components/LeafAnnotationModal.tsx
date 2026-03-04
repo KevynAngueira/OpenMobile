@@ -1,6 +1,6 @@
 // LeafAnnotationModal.tsx
 import React, { useState,  useEffect } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, Button } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, Button, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { isLeafDetailsValid } from '../utils/AnnotationValidation';
 import { LeafAnnotation, Location } from '../../types/AnnotationTypes';
 import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig';
@@ -118,34 +118,34 @@ const LeafAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedLea
               />
 
               {/* Original Area */}
-              {!DevFlags.isEnabled("altOriginalArea") ? (
-                <>
-                  <Text style={styles.sectionHeader}>Original Area</Text>
-                  <TextInput
-                    placeholder="Enter leaf number (7–21)"
-                    style={styles.input}
-                    value={leaf.leafNumber}
-                    onChangeText={(text) => setLeaf({ ...leaf, leafNumber: text })}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    placeholder="Enter Base Widths (in, comma-separated)"
-                    style={styles.input}
-                    value={leafWidthsText}
-                    onChangeText={(text) => {
-                      setLeafWidthsText(text);
-                      const widths = text
-                        .split(',')
-                        .map((w) => w.trim())
-                        .filter((w) => w !== '' && !isNaN(Number(w)))
-                        .map(String);
-                      setLeaf({ ...leaf, leafWidths: widths });
-                    }}
-                    onBlur={() => setLeafWidthsText(leaf.leafWidths.join(', '))}
-                    keyboardType="numeric"
-                  />
-                </>
-              ) : (
+              <>
+                <Text style={styles.sectionHeader}>Original Area</Text>
+                <TextInput
+                  placeholder="Enter leaf number (7–21)"
+                  style={styles.input}
+                  value={leaf.leafNumber}
+                  onChangeText={(text) => setLeaf({ ...leaf, leafNumber: text })}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  placeholder="Enter Base Widths (in, comma-separated)"
+                  style={styles.input}
+                  value={leafWidthsText}
+                  onChangeText={(text) => {
+                    setLeafWidthsText(text);
+                    const widths = text
+                      .split(',')
+                      .map((w) => w.trim())
+                      .filter((w) => w !== '' && !isNaN(Number(w)))
+                      .map(String);
+                    setLeaf({ ...leaf, leafWidths: widths });
+                  }}
+                  onBlur={() => setLeafWidthsText(leaf.leafWidths.join(', '))}
+                  keyboardType="numeric"
+                />
+              </>
+
+              {DevFlags.isEnabled("altOriginalArea") && (
                 <>
                   <Text style={styles.sectionHeader}>Alternate Original Area</Text>
                   <TextInput
