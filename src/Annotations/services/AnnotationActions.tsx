@@ -7,10 +7,12 @@ import { FieldAnnotation, LeafAnnotation, PlantAnnotation } from '../../types/An
 
 import { DevServerConfig } from '../../DevConsole/configs/DevServerConfig';
 import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig';
+import { useAnnotationMaps } from '../../hooks/useAnnotationMaps';
 
 const useHandleSync = () => {
   const { syncAllPending } = useSync();
   const { syncAllManifest } = useManifestSync();
+  
   
   const handleSync = async (
     fieldAnnotations: FieldAnnotation[],
@@ -21,6 +23,8 @@ const useHandleSync = () => {
 
     let serverURL = DevServerConfig.getBaseURL(); 
 
+    const { listToLeaves, listToPlants, getHierarchyName } = useAnnotationMaps(fieldAnnotations, plantAnnotations, leafAnnotations);
+
     const entriesToSend = leafAnnotations
     .filter((leaf) =>
       leaf.video &&
@@ -29,7 +33,7 @@ const useHandleSync = () => {
     .map((leaf) => {
       const params: any = {};
 
-      params.name = leaf.name;
+      params.name = getHierarchyName(leaf.id, "leaf", "leaf");
       params.length = leaf.length;
       params.leafNumber = leaf.leafNumber;
       params.leafWidths = leaf.leafWidths;
