@@ -29,6 +29,7 @@ const useHandleSync = () => {
     .map((leaf) => {
       const params: any = {};
 
+      params.name = leaf.name;
       params.length = leaf.length;
       params.leafNumber = leaf.leafNumber;
       params.leafWidths = leaf.leafWidths;
