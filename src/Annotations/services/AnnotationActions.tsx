@@ -9,7 +9,7 @@ import { DevServerConfig } from '../../DevConsole/configs/DevServerConfig';
 import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig';
 import { useAnnotationMaps } from '../../hooks/useAnnotationMaps';
 
-const useHandleSync = () => {
+const useHandleSync = (getHierarchyName: any) => {
   const { syncAllPending } = useSync();
   const { syncAllManifest } = useManifestSync();
   
@@ -22,8 +22,6 @@ const useHandleSync = () => {
   ) => {
 
     let serverURL = DevServerConfig.getBaseURL(); 
-
-    const { listToLeaves, listToPlants, getHierarchyName } = useAnnotationMaps(fieldAnnotations, plantAnnotations, leafAnnotations);
 
     const entriesToSend = leafAnnotations
     .filter((leaf) =>

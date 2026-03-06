@@ -50,7 +50,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { syncEntries, removeSyncEntry } = useSync();
   const { videoToSync } = useSyncMaps(syncEntries);
 
-  const { handleSync } = useHandleSync();
+  const { handleSync } = useHandleSync(getHierarchyName);
   const [syncResult, setSyncResult] = useState<string | null>(null);
  
   const [viewMode, setViewMode] = useState<'field' | 'plant' | 'leaf'>('field');
