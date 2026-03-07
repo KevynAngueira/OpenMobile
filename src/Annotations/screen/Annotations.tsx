@@ -50,7 +50,7 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
   const { syncEntries, removeSyncEntry } = useSync();
   const { videoToSync } = useSyncMaps(syncEntries);
 
-  const { handleSync } = useHandleSync(getHierarchyName);
+  const { handleSync, handleSyncPlant } = useHandleSync(getHierarchyName);
   const [syncResult, setSyncResult] = useState<string | null>(null);
  
   const [viewMode, setViewMode] = useState<'field' | 'plant' | 'leaf'>('field');
@@ -254,6 +254,13 @@ const Annotations: React.FC<AnnotationsProps> = ({ route, navigation }) =>  {
     onDeleteAnnotation: handleDeletePlantAnnotation,
     getLeaves: listToLeaves,
     getName: (plantId) => getHierarchyName(plantId, "plant", viewMode),
+    onSyncPlant: (plant) => handleSyncPlant(
+      plant.id,
+      fieldAnnotations,
+      plantAnnotations,
+      leafAnnotations,
+      setSyncResult
+    ),
   }
 
   const fieldCallbacks : FieldCallbacks = {

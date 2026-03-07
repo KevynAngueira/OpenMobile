@@ -6,6 +6,7 @@ type DevFlagsType = {
   bypassVideoValidation: boolean;
   altOriginalArea: boolean;
   allowResetEntries: boolean;
+  allowIndividualSync: boolean;
 };
 
 const flags: DevFlagsType = {
@@ -13,6 +14,7 @@ const flags: DevFlagsType = {
   bypassVideoValidation: false,
   altOriginalArea: false,
   allowResetEntries: false,
+  allowIndividualSync: false,
 };
 
 export const DevFlags = {

@@ -7,6 +7,8 @@ import LeafAnnotationList from './LeafAnnotationList';
 import { PlantStatusIndicator } from './PlantStatusIndicator';
 import { LeafAnnotation, PlantAnnotation, LeafCallbacks, PlantCallbacks } from '../../types/AnnotationTypes';
 
+import { DevFlags } from '../../DevConsole/configs/DevFlagsConfig';
+
 interface PlantAnnotationListProps {
   plantAnnotations: PlantAnnotation[];
   plantCallbacks: PlantCallbacks;
@@ -72,6 +74,15 @@ const PlantAnnotationList = (props : PlantAnnotationListProps ) => {
                   leafAnnotations={leavesForPlant}
                   leafCallbacks={leafCallbacks}
                 />
+
+                { DevFlags.isEnabled("allowIndividualSync") && (
+                  <TouchableOpacity
+                    style={styles.syncButton}
+                    onPress={() => plantCallbacks.onSyncPlant(plant)}
+                  >
+                    <Text style={styles.syncButtonText}>Sync Plant</Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   style={styles.editButton}
@@ -150,6 +161,20 @@ const styles = StyleSheet.create({
   videoText: {
     marginTop: 4,
     fontSize: 15,
+  },
+
+  syncButton: {
+    backgroundColor: '#1E3A5F',
+    padding: 10,
+    borderRadius: 6,
+    marginTop: 10,
+  },
+  
+  syncButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600'
   },
 
   editButton: {

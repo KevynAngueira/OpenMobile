@@ -56,6 +56,7 @@ export interface PlantCallbacks {
   onDeleteAnnotation: (plant: PlantAnnotation) => void;
   getLeaves: (leafList: string[]) => LeafAnnotation[];
   getName: (plantId: string | null) => string;
+  onSyncPlant: (plant: PlantAnnotation) => void;
 }
 
 export interface FieldCallbacks {

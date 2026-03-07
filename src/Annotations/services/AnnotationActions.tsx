@@ -70,8 +70,85 @@ const useHandleSync = (getHierarchyName: any) => {
       setTimeout(() => setSyncResult(null), 3000);
     }
   };
+
+
+  const handleSyncPlant = async (
+    plantId: string,
+    fieldAnnotations: FieldAnnotation[],
+    plantAnnotations: PlantAnnotation[],
+    leafAnnotations: LeafAnnotation[],
+    setSyncResult: (message: string) => void
+  ) => {
   
-  return { handleSync };
+    const serverURL = DevServerConfig.getBaseURL();
+  
+    const plant = plantAnnotations.find(p => p.id === plantId);
+  
+    if (!plant) {
+      setSyncResult(`Plant not found: ${plantId}`);
+      return;
+    }
+  
+    const leafIdSet = new Set(plant.childLeaves);
+  
+    const plantLeaves = leafAnnotations.filter(
+      leaf => leafIdSet.has(leaf.id)
+    );
+  
+    const entriesToSend = plantLeaves
+      .filter((leaf) =>
+        leaf.video &&
+        isLeafDetailsValid(
+          leaf.length,
+          leaf.leafNumber,
+          leaf.leafWidths,
+          leaf.directArea,
+          leaf.maxLength,
+          leaf.maxWidth
+        )
+      )
+      .map((leaf) => {
+  
+        const params: any = {};
+  
+        params.name = getHierarchyName(leaf.id, "leaf", "leaf");
+        params.length = leaf.length;
+        params.leafNumber = leaf.leafNumber;
+        params.leafWidths = leaf.leafWidths;
+  
+        if (DevFlags.isEnabled("altOriginalArea")){
+          params.directArea = leaf.directArea;
+          params.maxLength = leaf.maxLength;
+          params.maxWidth = leaf.maxWidth;
+        } else {
+          params.directArea = "";
+          params.maxLength = "";
+          params.maxWidth = "";
+        }
+  
+        return {
+          path: leaf.video,
+          params
+        };
+      });
+  
+    if (entriesToSend.length === 0) {
+      setSyncResult(`No valid leaves to sync for plant ${plantId}`);
+      return;
+    }
+  
+    try {
+      await syncAllPending(serverURL, entriesToSend, setSyncResult);
+    } catch (error: any) {
+      console.error('Inference Sync error:', error);
+      setSyncResult("Inference Sync Failed: " + error.message);
+      setTimeout(() => setSyncResult(null), 3000);
+    }
+  };
+  
+
+  return { handleSync, handleSyncPlant };
 }
+
 
 export default useHandleSync;
