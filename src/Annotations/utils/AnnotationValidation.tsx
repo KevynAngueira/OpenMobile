@@ -1,7 +1,7 @@
 import { LeafAnnotation } from "../../types/AnnotationTypes";
 import { DevFlags } from "../../DevConsole/configs/DevFlagsConfig";
 
-export const isLeafDetailsValid = (length: string, leafNumber: string, leafWidths: string[], directArea?: string, maxLength?: string, maxWidth?: string) => {
+export const isLeafDetailsValid = (length: string, leafNumber: string, directArea?: string, maxLength?: string, maxWidth?: string) => {
     
     const altOriginalArea = DevFlags.isEnabled("altOriginalArea");
     
@@ -12,6 +12,7 @@ export const isLeafDetailsValid = (length: string, leafNumber: string, leafWidth
         // ─────────────────────────────
         // STANDARD MODE
         // ─────────────────────────────
+        /*
         if (
           leafNumber == null ||
           leafWidths == null ||
@@ -19,10 +20,13 @@ export const isLeafDetailsValid = (length: string, leafNumber: string, leafWidth
         ) {
           return false;
         }
+        */
+
+        if (leafNumber == null) { return false; }
     
         const validLeafNumber = !!leafNumber && !isNaN(parseInt(leafNumber)) && parseInt(leafNumber) >= 7 && parseInt(leafNumber) <= 21;
-        const validWidths = leafWidths.every((w) => w !== '' && !isNaN(parseFloat(w)));
-        return validLength && validLeafNumber && validWidths;
+        // const validWidths = leafWidths.every((w) => w !== '' && !isNaN(parseFloat(w)));
+        return validLeafNumber; //&& validWidths;
     
     } else {
         // ─────────────────────────────
@@ -51,7 +55,6 @@ export const isLeafAnnotationComplete = (annotation: LeafAnnotation) => {
     const validLeaf = isLeafDetailsValid(
       annotation.length,
       annotation.leafNumber,
-      annotation.leafWidths,
       annotation.directArea,
       annotation.maxLength,
       annotation.maxWidth

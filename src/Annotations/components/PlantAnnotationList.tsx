@@ -62,13 +62,6 @@ const PlantAnnotationList = (props : PlantAnnotationListProps ) => {
                   <Text style={styles.infoValue}>{plant.info || "—"}</Text>
                 </View>
 
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Location:</Text>
-                  <Text style={styles.infoValue}>
-                    {plant.location?.latitude ?? "—"}, {plant.location?.longitude ?? "—"}
-                  </Text>
-                </View>
-
                 <LeafAnnotationList
                   plantId={plant.id ?? 'All'}
                   leafAnnotations={leavesForPlant}

@@ -26,7 +26,7 @@ const useHandleSync = (getHierarchyName: any) => {
     const entriesToSend = leafAnnotations
     .filter((leaf) =>
       leaf.video &&
-      isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.leafWidths, leaf.directArea, leaf.maxLength, leaf.maxWidth)
+      isLeafDetailsValid(leaf.length, leaf.leafNumber, leaf.directArea, leaf.maxLength, leaf.maxWidth)
     )
     .map((leaf) => {
       const params: any = {};
@@ -34,7 +34,7 @@ const useHandleSync = (getHierarchyName: any) => {
       params.name = getHierarchyName(leaf.id, "leaf", "leaf");
       params.length = leaf.length;
       params.leafNumber = leaf.leafNumber;
-      params.leafWidths = leaf.leafWidths;
+      //params.leafWidths = leaf.leafWidths;
 
       if (DevFlags.isEnabled("altOriginalArea")){
         params.directArea = leaf.directArea;
@@ -101,7 +101,6 @@ const useHandleSync = (getHierarchyName: any) => {
         isLeafDetailsValid(
           leaf.length,
           leaf.leafNumber,
-          leaf.leafWidths,
           leaf.directArea,
           leaf.maxLength,
           leaf.maxWidth
@@ -114,7 +113,6 @@ const useHandleSync = (getHierarchyName: any) => {
         params.name = getHierarchyName(leaf.id, "leaf", "leaf");
         params.length = leaf.length;
         params.leafNumber = leaf.leafNumber;
-        params.leafWidths = leaf.leafWidths;
   
         if (DevFlags.isEnabled("altOriginalArea")){
           params.directArea = leaf.directArea;

@@ -64,43 +64,6 @@ const PlantAnnotationModal = ({ visible, onClose, onCreateAnnotation, selectedPl
             onChangeText={(text) => {setPlant({...plant, info: text})}}
           />
 
-          {/* Location Section }
-          <View style={styles.buttonSpacing}>
-            <Button 
-              title={useCustomLocation ? "Use Current Location" : "Enter Custom Coordinates"} 
-              onPress={() => {
-                setUseCustomLocation(!useCustomLocation);
-                if (!useCustomLocation) {
-                  setLatitude(500);
-                  setLongitude(500);
-                }
-            }} 
-              color={
-                (!useCustomLocation || (latitude && longitude)) 
-                  ? '#4CAF50'  // Green
-                  : '#9E9E9E'  // Grey
-              }
-            />
-          </View>
-          
-          {useCustomLocation && (
-            <>
-              <TextInput
-                placeholder="Enter latitude"
-                style={styles.input}
-                value={latitude}
-                onChangeText={setLatitude}
-              />
-              <TextInput
-                placeholder="Enter longitude"
-                style={styles.input}
-                value={longitude}
-                onChangeText={setLongitude}
-              />
-            </>
-          )}
-          */}
-
           <View style={styles.modalButtons}>
             <Button title="Cancel" onPress={onClose} />
             <Button title={selectedPlant?.id ? "Confirm" : "Create"} onPress={handleCreate} />

@@ -123,36 +123,20 @@ const LeafAnnotationList = (props: LeafAnnotationListProps) => {
                           <Text style={styles.infoValue}>{leaf.info || "—"}</Text>
                         </View>
 
-                        {/*
+                        {/* Base Leaf Details */}
                         <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>Location:</Text>
-                          <Text style={styles.infoValue}>
-                            {leaf.location?.latitude ?? "—"}, {leaf.location?.longitude ?? "—"}
-                          </Text>
+                          <Text style={styles.infoLabel}>Leaf Number:</Text>
+                          <Text style={styles.infoValue}>{leaf.leafNumber || "—"}</Text>
                         </View>
-                        */}
 
-                        {/* Remaining Area */}
                         <View style={styles.infoRow}>
                           <Text style={styles.infoLabel}>Length:</Text>
                           <Text style={styles.infoValue}>{leaf.length || "—"}</Text>
                         </View>
 
-                        { !DevFlags.isEnabled("altOriginalArea") ? (
+                        { DevFlags.isEnabled("altOriginalArea") && (
                           <>
-                            {/* Standard Original Area */}
-                            <View style={styles.infoRow}>
-                              <Text style={styles.infoLabel}>Leaf Number:</Text>
-                              <Text style={styles.infoValue}>{leaf.leafNumber || "—"}</Text>
-                            </View>
-                            <View style={styles.infoRow}>
-                              <Text style={styles.infoLabel}>Widths:</Text>
-                              <Text style={styles.infoValue}>{leaf.leafWidths?.join(", ") || "—"}</Text>
-                            </View>
-                          </>
-                        ) : (
-                          <>
-                            {/* Alternative Original Area */}
+                            {/* Alternative Leaf Details */}
                             <View style={styles.infoRow}>
                               <Text style={styles.infoLabel}>Direct Area:</Text>
                               <Text style={styles.infoValue}>{leaf.directArea || "—"}</Text>
